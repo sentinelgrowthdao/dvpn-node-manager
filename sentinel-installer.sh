@@ -103,7 +103,7 @@ function wait_funds()
 		--interactive \
 		--tty \
 		--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
-		sentinel-dvpn-node process keys show | awk 'NR==2{print $2}')
+		sentinel-dvpn-node process keys show | awk 'NR==2{print $3}')
 	
 	# If public address doesn't start with "sent" then return error
 	if [[ ! ${PUBLIC_ADDRESS} == "sent"* ]]; then
