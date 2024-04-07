@@ -196,6 +196,8 @@ function initialize_wallet()
 					--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
 					sentinel-dvpn-node process keys add)
 		
+		output_log "Wallet creation output: ${OUTPUT}"
+		
 		# If the ouput contains "Important" then extract the mnemonic
 		if echo "$OUTPUT" | grep -q "Important"
 		then
@@ -236,15 +238,15 @@ function open_firewall()
 	sudo echo "y" | sudo ufw enable > /dev/null 2>&1 || { output_error "Failed to enable UFW."; return 1; }
 	
 	# Allow WireGuard
-	if ! sudo ufw status | grep -q "${WIREGUARD_PORT}/udp"
+	if ! sudo ufw status | grep -q "${WIREGUARD_PORT}/tcp"
 	then
-		sudo ufw allow ${WIREGUARD_PORT}/udp > /dev/null 2>&1 || { output_error "Failed to allow WireGuard."; return 1; }
+		sudo ufw allow ${WIREGUARD_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow WireGuard."; return 1; }
 	fi
 	
 	# Allow V2Ray
-	if ! sudo ufw status | grep -q "${V2RAY_PORT}/tcp"
+	if ! sudo ufw status | grep -q "${V2RAY_PORT}/udp"
 	then
-		sudo ufw allow ${V2RAY_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow V2Ray."; return 1; }
+		sudo ufw allow ${V2RAY_PORT}/udp > /dev/null 2>&1 || { output_error "Failed to allow V2Ray."; return 1; }
 	fi
 	
 	# Reload UFW
