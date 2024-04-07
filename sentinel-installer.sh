@@ -503,7 +503,7 @@ function menu_installation()
 	start_node || return 1;
 	
 	# Display message to user
-	whiptail --title "Installation Complete" --msgbox "The Sentinel node has been successfully installed and started!\nYou can now access the node dashboard by visiting the following URL:\n\n\thttps://${NODE_IP}:${NODE_PORT}/status" 12 100
+	whiptail --title "Installation Complete" --msgbox "The Sentinel node has been successfully installed and started!\nYou can now access the node dashboard by visiting the following URL:\n\nhttps://${NODE_IP}:${NODE_PORT}/status" 12 100
 	
 	return 0;
 }
