@@ -183,11 +183,10 @@ function initialize_wallet()
 		MNEMONIC=$(whiptail --inputbox "Please enter your wallet's mnemonic:" 8 78 --title "Wallet Mnemonic" 3>&1 1>&2 2>&3) || { output_error "Failed to get mnemonic."; return 1; }
 		
 		# Restore wallet
-		echo $MNEMONIC | sudo docker run --rm \
+		echo "$MNEMONIC" | sudo docker run --rm \
 			--interactive \
-			--tty \
 			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
-			sentinel-dvpn-node process keys add --recover
+			sentinel-dvpn-node process keys add --recover || { output_error "Failed to restore wallet."; return 1; }
 	else
 		# Create new wallet
 		OUTPUT=$(docker run --rm \
