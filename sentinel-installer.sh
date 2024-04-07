@@ -237,6 +237,12 @@ function open_firewall()
 	# Enable UFW
 	sudo echo "y" | sudo ufw enable > /dev/null 2>&1 || { output_error "Failed to enable UFW."; return 1; }
 	
+	# Allow Node port
+	if ! sudo ufw status | grep -q "${NODE_PORT}/tcp"
+	then
+		sudo ufw allow ${NODE_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow node port."; return 1; }
+	fi
+	
 	# Allow WireGuard
 	if ! sudo ufw status | grep -q "${WIREGUARD_PORT}/tcp"
 	then
