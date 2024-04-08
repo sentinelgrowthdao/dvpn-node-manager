@@ -181,6 +181,13 @@ function check_installation()
 		return 1
 	fi
 	
+	# If user is not in docker group, return false
+	if ! groups | grep -q "\bdocker\b"
+	then
+		output_log "User is not in Docker group."
+		return 1
+	fi
+	
 	# If sentinel docker image not installed, return false
 	if ! docker image inspect ${CONTAINER_NAME} &> /dev/null
 	then
@@ -209,7 +216,7 @@ function check_installation()
 		return 1
 	fi
 	
-	
+	return 0;
 }
 
 # Function to output log messages
@@ -265,10 +272,16 @@ function install_docker()
 	# Check if Docker is installed return 0
 	if command -v docker &> /dev/null
 	then
-		# Add the current user to the Docker group if not already a member
-		docker_usermod || return 1;
-		# Ask user to reboot the system
-		message_docker_reboot_required
+		# Check if the user is in the docker group
+		if ! groups | grep -q "\bdocker\b"
+		then
+			# Add the current user to the Docker group if not already a member
+			docker_usermod || return 1;
+			# Ask user to reboot the system
+			message_docker_reboot_required
+		else
+			return 0;
+		fi
 	fi
 	
 	# Install dependencies
@@ -306,8 +319,8 @@ function docker_usermod()
 	# Check if the user is in the docker group
 	if ! groups | grep -q "\bdocker\b"; then
 		# Add the user to the docker group
-		usermod -aG docker $(whoami) || { output_error "Failed to add user to docker group."; return 1; }
-		echo "User added to docker group."
+		usermod -aG docker ${SUDO_USER:-$(whoami)} || { output_error "Failed to add user to docker group."; return 1; }
+		output_log "User added to docker group."
 	fi
 	
 	return 0;
