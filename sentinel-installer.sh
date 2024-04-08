@@ -265,29 +265,49 @@ function install_docker()
 	# Check if Docker is installed return 0
 	if command -v docker &> /dev/null
 	then
-		return 0;
+		# Add the current user to the Docker group if not already a member
+		docker_usermod || return 1;
+		# Ask user to reboot the system
+		message_docker_reboot_required
 	fi
 	
 	# Install dependencies
 	sudo apt install -y curl git openssl || { output_error "Failed to install dependencies."; return 1; }
 	
 	# Download and execute the Docker installation script
+	set -o pipefail
 	curl -fsSL get.docker.com | sudo sh || { output_error "Failed to install Docker."; return 1; }
 	
 	# Enable and start the Docker service
 	sudo systemctl enable --now docker || { output_error "Failed to enable Docker."; return 1; }
-
+	
 	# Add the current user to the Docker group
 	sudo usermod -aG docker $(whoami) || { output_error "Failed to add user to Docker group."; return 1; }
-
-	# Re-login the user to apply group changes
-	sudo -i -u $(whoami) || { output_error "Failed to re-login user."; return 1; }
+	
+	# Add the current user to the Docker group if not already a member
+	docker_usermod || return 1;
 	
 	# Check if Docker is now installed
 	if ! command -v docker &> /dev/null
 	then
 		output_error "Docker installation failed.";
 		return 1;
+	else
+		# Ask user to reboot the system
+		message_docker_reboot_required
+	fi
+	
+	return 0;
+}
+
+# Function to check if the user is in the docker group and add them if not
+function docker_usermod()
+{
+	# Check if the user is in the docker group
+	if ! groups | grep -q "\bdocker\b"; then
+		# Add the user to the docker group
+		sudo usermod -aG docker $(whoami) || { output_error "Failed to add user to docker group."; return 1; }
+		echo "User added to docker group."
 	fi
 	
 	return 0;
@@ -622,6 +642,22 @@ function message_wait_funds()
 	return 0;
 }
 
+# Function to display a message to inform about Docker installation and reboot requirement
+function message_docker_reboot_required()
+{
+	# Display message to inform about Docker installation and reboot requirement
+	whiptail --title "Docker Installation" --msgbox "Docker has been successfully installed. A system reboot is required for the changes to take effect. Please choose an option below:" 10 78 \
+		--ok-button "Reboot Now" --cancel-button "Quit Without Reboot"
+
+	# Check the exit status of whiptail
+	if [ $? -eq 0 ]; then
+		# Reboot the system
+		sudo reboot
+	else
+		# Quit without rebooting
+		exit 0
+	fi
+}
 
 ####################################################################################################
 # Menu functions
