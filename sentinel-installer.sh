@@ -30,16 +30,16 @@ NODE_ADDRESS=""
 function load_config_files()
 {
 	# Load config files into variables
-	NODE_MONIKER=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^moniker\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	NODE_TYPE=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^type\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	NODE_IP=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^remote_url\s*=" | awk -F" = " '{print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
-	NODE_PORT=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^listen_on\s*=" | awk -F" = " '{print $2}' | tr -d '"' | awk -F":" '{print $2}')
-	WIREGUARD_PORT=$(sudo cat ${HOME}/.sentinelnode/wireguard.toml | grep "^listen_port\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	V2RAY_PORT=$(sudo cat ${HOME}/.sentinelnode/v2ray.toml | grep "^listen_port\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	CHAIN_ID=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^id\s*=" | awk -F"=" '{print $2}' | tr -d '"')
-	RPC_ADDRESSES=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^rpc_addresses\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	BACKEND=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^backend\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	HOURLY_PRICES=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^hourly_prices\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	NODE_MONIKER=$(cat ${HOME}/.sentinelnode/config.toml | grep "^moniker\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	NODE_TYPE=$(cat ${HOME}/.sentinelnode/config.toml | grep "^type\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	NODE_IP=$(cat ${HOME}/.sentinelnode/config.toml | grep "^remote_url\s*=" | awk -F" = " '{print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
+	NODE_PORT=$(cat ${HOME}/.sentinelnode/config.toml | grep "^listen_on\s*=" | awk -F" = " '{print $2}' | tr -d '"' | awk -F":" '{print $2}')
+	WIREGUARD_PORT=$(cat ${HOME}/.sentinelnode/wireguard.toml | grep "^listen_port\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	V2RAY_PORT=$(cat ${HOME}/.sentinelnode/v2ray.toml | grep "^listen_port\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	CHAIN_ID=$(cat ${HOME}/.sentinelnode/config.toml | grep "^id\s*=" | awk -F"=" '{print $2}' | tr -d '"')
+	RPC_ADDRESSES=$(cat ${HOME}/.sentinelnode/config.toml | grep "^rpc_addresses\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	BACKEND=$(cat ${HOME}/.sentinelnode/config.toml | grep "^backend\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	HOURLY_PRICES=$(cat ${HOME}/.sentinelnode/config.toml | grep "^hourly_prices\s*=" | awk -F" = " '{print $2}' | tr -d '"')
 
 	# if hourly_prices egale to DATACENTER_HOURLY_PRICES
 	if [ "$HOURLY_PRICES" == "$DATACENTER_HOURLY_PRICES" ]
@@ -56,45 +56,45 @@ function load_config_files()
 function refresh_config_files()
 {
 	# Update configuration
-	sudo sed -i "s/moniker = .*/moniker = \"${NODE_MONIKER}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set moniker."; return 1; }
+	sed -i "s/moniker = .*/moniker = \"${NODE_MONIKER}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set moniker."; return 1; }
 	
 	# Update chain_id parameter
-	sudo sed -i "s/id = .*/id = \"${CHAIN_ID}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set chain ID."; return 1; }
+	sed -i "s/id = .*/id = \"${CHAIN_ID}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set chain ID."; return 1; }
 	
 	# Update rpc_addresses parameter
-	sudo sed -i "s/rpc_addresses = .*/rpc_addresses = \"${RPC_ADDRESSES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote RPC."; return 1; }
+	sed -i "s/rpc_addresses = .*/rpc_addresses = \"${RPC_ADDRESSES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote RPC."; return 1; }
 	
 	# Update node type parameter
-	sudo sed -i "s/type = .*/type = \"${NODE_TYPE}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set node type."; return 1; }
+	sed -i "s/type = .*/type = \"${NODE_TYPE}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set node type."; return 1; }
 	
 	# Update remote_url parameter
-	sudo sed -i "s/listen_on = .*/listen_on = \"0\\.0\\.0\\.0:${NODE_PORT}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
+	sed -i "s/listen_on = .*/listen_on = \"0\\.0\\.0\\.0:${NODE_PORT}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
 	
 	# Update remote_url parameter
-	sudo sed -i "s/remote_url = .*/remote_url = \"https:\/\/${NODE_IP}:${NODE_PORT}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
+	sed -i "s/remote_url = .*/remote_url = \"https:\/\/${NODE_IP}:${NODE_PORT}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
 	
 	# Update backend parameter
-	sudo sed -i "s/backend = .*/backend = \"${BACKEND}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set backend."; return 1; }
+	sed -i "s/backend = .*/backend = \"${BACKEND}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set backend."; return 1; }
 	
 	# Update WireGuard port
-	sudo sed -i "s/listen_port = .*/listen_port = ${WIREGUARD_PORT}/g" ${HOME}/.sentinelnode/wireguard.toml || { output_error "Failed to set WireGuard port."; return 1; }
+	sed -i "s/listen_port = .*/listen_port = ${WIREGUARD_PORT}/g" ${HOME}/.sentinelnode/wireguard.toml || { output_error "Failed to set WireGuard port."; return 1; }
 	
 	# Update V2Ray port
-	sudo sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${HOME}/.sentinelnode/v2ray.toml || { output_error "Failed to set V2Ray port."; return 1; }
+	sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${HOME}/.sentinelnode/v2ray.toml || { output_error "Failed to set V2Ray port."; return 1; }
 	
 	if [ "$NODE_LOCATION" == "residential" ]
 	then
 		# Update gigabyte_prices parameter
-		sudo sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${RESIDENTIAL_GIGABYTE_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
+		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${RESIDENTIAL_GIGABYTE_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
 		
 		# Update hourly_prices parameter
-		sudo sed -i "s/hourly_prices = .*/hourly_prices = \"${RESIDENTIAL_HOURLY_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
+		sed -i "s/hourly_prices = .*/hourly_prices = \"${RESIDENTIAL_HOURLY_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
 	else
 		# Update gigabyte_prices parameter
-		sudo sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${DATACENTER_GIGABYTE_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
+		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${DATACENTER_GIGABYTE_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
 		
 		# Update hourly_prices parameter
-		sudo sed -i "s/hourly_prices = .*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
+		sed -i "s/hourly_prices = .*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
 	fi
 
 	return 0;
@@ -107,7 +107,7 @@ function generate_sentinel_config()
 	if [ ! -f "${HOME}/.sentinelnode/config.toml" ]
 	then
 		# Generate Sentinel config
-		sudo docker run --rm \
+		docker run --rm \
 			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
 			${CONTAINER_NAME} process config init || { output_error "Failed to generate Sentinel configuration."; return 1; }
 	fi
@@ -116,7 +116,7 @@ function generate_sentinel_config()
 	if [ ! -f "${HOME}/.sentinelnode/wireguard.toml" ]
 	then
 		# Generate WireGuard config
-		sudo docker run --rm \
+		docker run --rm \
 			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
 			${CONTAINER_NAME} process wireguard config init || { output_error "Failed to generate WireGuard configuration."; return 1; }
 	fi
@@ -125,7 +125,7 @@ function generate_sentinel_config()
 	if [ ! -f "${HOME}/.sentinelnode/v2ray.toml" ]
 	then
 		# Generate V2Ray config
-		sudo docker run --rm \
+		docker run --rm \
 			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
 			${CONTAINER_NAME} process v2ray config init || { output_error "Failed to generate V2Ray configuration."; return 1; }
 	fi
@@ -143,7 +143,7 @@ function generate_certificate()
 	fi
 	
 	# Generate certificate
-	sudo openssl req -new \
+	openssl req -new \
 	-newkey ec \
 	-pkeyopt ec_paramgen_curve:prime256v1 \
 	-x509 \
@@ -154,8 +154,8 @@ function generate_certificate()
 	-subj "/C=NA/ST=NA/L=./O=NA/OU=./CN=." \
 	-keyout ${HOME}/.sentinelnode/tls.key || { output_error "Failed to generate certificate."; return 1; }
 	
-	sudo chown root:root ${HOME}/.sentinelnode/tls.crt && \
-	sudo chown root:root ${HOME}/.sentinelnode/tls.key || { output_error "Failed to change ownership of certificate files."; return 1; }
+	chown root:root ${HOME}/.sentinelnode/tls.crt && \
+	chown root:root ${HOME}/.sentinelnode/tls.key || { output_error "Failed to change ownership of certificate files."; return 1; }
 	
 	return 0;
 }
@@ -272,17 +272,17 @@ function install_docker()
 	fi
 	
 	# Install dependencies
-	sudo apt install -y curl git openssl || { output_error "Failed to install dependencies."; return 1; }
+	apt install -y curl git openssl || { output_error "Failed to install dependencies."; return 1; }
 	
 	# Download and execute the Docker installation script
 	set -o pipefail
-	curl -fsSL get.docker.com | sudo sh || { output_error "Failed to install Docker."; return 1; }
+	curl -fsSL get.docker.com | sh || { output_error "Failed to install Docker."; return 1; }
 	
 	# Enable and start the Docker service
-	sudo systemctl enable --now docker || { output_error "Failed to enable Docker."; return 1; }
+	systemctl enable --now docker || { output_error "Failed to enable Docker."; return 1; }
 	
 	# Add the current user to the Docker group
-	sudo usermod -aG docker $(whoami) || { output_error "Failed to add user to Docker group."; return 1; }
+	usermod -aG docker $(whoami) || { output_error "Failed to add user to Docker group."; return 1; }
 	
 	# Add the current user to the Docker group if not already a member
 	docker_usermod || return 1;
@@ -306,7 +306,7 @@ function docker_usermod()
 	# Check if the user is in the docker group
 	if ! groups | grep -q "\bdocker\b"; then
 		# Add the user to the docker group
-		sudo usermod -aG docker $(whoami) || { output_error "Failed to add user to docker group."; return 1; }
+		usermod -aG docker $(whoami) || { output_error "Failed to add user to docker group."; return 1; }
 		echo "User added to docker group."
 	fi
 	
@@ -358,13 +358,13 @@ function container_install()
 function container_start()
 {
 	# Read config file and check type of node
-	TYPE=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "type" | awk -F" = " '{print $2}' | tr -d '"')
+	TYPE=$(cat ${HOME}/.sentinelnode/config.toml | grep "type" | awk -F" = " '{print $2}' | tr -d '"')
 	
 	# If node type is wireguard
 	if [ "$TYPE" == "wireguard" ]
 	then
 		# Start WireGuard node
-		sudo docker run -d \
+		docker run -d \
 			--restart unless-stopped \
 			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
 			--volume /lib/modules:/lib/modules \
@@ -383,7 +383,7 @@ function container_start()
 	elif [ "$TYPE" == "v2ray" ]
 	then
 		# Start V2Ray node
-		sudo docker run -d \
+		docker run -d \
 			--restart unless-stopped \
 			--volume "${HOME}/.sentinelnode:/root/.sentinelnode" \
 			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
@@ -424,7 +424,7 @@ function wallet_initialization()
 		if whiptail --title "Wallet Exists" --yesno "A wallet already exists. Do you want to delete the existing wallet and continue?" 8 78
 		then
 			# Delete existing wallet
-			sudo docker run --rm \
+			docker run --rm \
 				--interactive \
 				--tty \
 				--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
@@ -442,7 +442,7 @@ function wallet_initialization()
 		MNEMONIC=$(whiptail --inputbox "Please enter your wallet's mnemonic:" 8 78 --title "Wallet Mnemonic" 3>&1 1>&2 2>&3) || { output_error "Failed to get mnemonic."; return 1; }
 		
 		# Restore wallet
-		echo "$MNEMONIC" | sudo docker run --rm \
+		echo "$MNEMONIC" | docker run --rm \
 			--interactive \
 			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
 			${CONTAINER_NAME} process keys add --recover || { output_error "Failed to restore wallet."; return 1; }
@@ -519,32 +519,32 @@ function firewall_configure()
 	if ! command -v ufw &> /dev/null
 	then
 		# Install UFW
-		sudo apt install -y ufw || { output_error "Failed to install UFW."; return 1; }
+		apt install -y ufw || { output_error "Failed to install UFW."; return 1; }
 	fi
 	
 	# Enable UFW
-	sudo echo "y" | sudo ufw enable > /dev/null 2>&1 || { output_error "Failed to enable UFW."; return 1; }
+	echo "y" | ufw enable > /dev/null 2>&1 || { output_error "Failed to enable UFW."; return 1; }
 	
 	# Allow Node port
-	if ! sudo ufw status | grep -q "${NODE_PORT}/tcp"
+	if ! ufw status | grep -q "${NODE_PORT}/tcp"
 	then
-		sudo ufw allow ${NODE_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow node port."; return 1; }
+		ufw allow ${NODE_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow node port."; return 1; }
 	fi
 	
 	# Allow WireGuard
-	if ! sudo ufw status | grep -q "${WIREGUARD_PORT}/tcp"
+	if ! ufw status | grep -q "${WIREGUARD_PORT}/tcp"
 	then
-		sudo ufw allow ${WIREGUARD_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow WireGuard."; return 1; }
+		ufw allow ${WIREGUARD_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow WireGuard."; return 1; }
 	fi
 	
 	# Allow V2Ray
-	if ! sudo ufw status | grep -q "${V2RAY_PORT}/udp"
+	if ! ufw status | grep -q "${V2RAY_PORT}/udp"
 	then
-		sudo ufw allow ${V2RAY_PORT}/udp > /dev/null 2>&1 || { output_error "Failed to allow V2Ray."; return 1; }
+		ufw allow ${V2RAY_PORT}/udp > /dev/null 2>&1 || { output_error "Failed to allow V2Ray."; return 1; }
 	fi
 	
 	# Reload UFW
-	sudo ufw reload > /dev/null 2>&1 || { output_error "Failed to reload UFW."; return 1; }
+	ufw reload > /dev/null 2>&1 || { output_error "Failed to reload UFW."; return 1; }
 	
 	return 0;
 }
@@ -652,7 +652,7 @@ function message_docker_reboot_required()
 	# Check the exit status of whiptail
 	if [ $? -eq 0 ]; then
 		# Reboot the system
-		sudo reboot
+		reboot
 	else
 		# Quit without rebooting
 		exit 0
@@ -671,7 +671,7 @@ function menu_installation()
 	if ! command -v whiptail &> /dev/null
 	then
 		# Install whiptail
-		sudo apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; return 1; }
+		apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; return 1; }
 	fi
 
 	if ! whiptail --title "Welcome to Sentinel Installation" --yesno "Welcome to the Sentinel installation process. This installation will be done in multiple steps and you will be guided throughout the process. Do you want to continue with the installation process?" 10 78
@@ -686,7 +686,7 @@ function menu_installation()
 	container_install || return 1;
 	
 	if [ ! -d "${HOME}/.sentinelnode" ]; then
-		sudo mkdir ${HOME}/.sentinelnode || { output_error "Failed to create Sentinel node directory."; return 1; }
+		mkdir ${HOME}/.sentinelnode || { output_error "Failed to create Sentinel node directory."; return 1; }
 	fi
 	
 	generate_certificate || return 1;
