@@ -46,8 +46,8 @@ function load_config_files()
 	CHAIN_ID=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^id\s*=" | awk -F"=" '{print $2}' | tr -d '"')
 	# RPC_ADDRESSES=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^rpc_addresses\s*=" | awk -F" = " '{print $2}' | tr -d '"')
 	# BACKEND=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^backend\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	locale HOURLY_PRICES=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^hourly_prices\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-
+	local HOURLY_PRICES=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^hourly_prices\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	
 	# if hourly_prices egale to DATACENTER_HOURLY_PRICES
 	if [ "$HOURLY_PRICES" == "$DATACENTER_HOURLY_PRICES" ]
 	then
