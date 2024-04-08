@@ -30,16 +30,16 @@ NODE_ADDRESS=""
 function load_config_files()
 {
 	# Load config files into variables
-	NODE_MONIKER=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "moniker" | awk -F" = " '{print $2}' | tr -d '"')
-	NODE_TYPE=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "type" | awk -F" = " '{print $2}' | tr -d '"')
-	NODE_IP=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "remote_url" | awk -F" = " '{print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
-	NODE_PORT=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "listen_on" | awk -F" = " '{print $2}' | tr -d '"' | awk -F":" '{print $2}')
-	WIREGUARD_PORT=$(sudo cat ${HOME}/.sentinelnode/wireguard.toml | grep "listen_port" | awk -F" = " '{print $2}' | tr -d '"')
-	V2RAY_PORT=$(sudo cat ${HOME}/.sentinelnode/v2ray.toml | grep "listen_port" | awk -F" = " '{print $2}' | tr -d '"')
-	CHAIN_ID=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "id" | awk -F" = " '{print $2}' | tr -d '"')
-	RPC_ADDRESSES=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "rpc_addresses" | awk -F" = " '{print $2}' | tr -d '"')
-	BACKEND=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "backend" | awk -F" = " '{print $2}' | tr -d '"')
-	HOURLY_PRICES=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "hourly_prices" | awk -F" = " '{print $2}' | tr -d '"')
+	NODE_MONIKER=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^moniker\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	NODE_TYPE=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^type\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	NODE_IP=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^remote_url\s*=" | awk -F" = " '{print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
+	NODE_PORT=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^listen_on\s*=" | awk -F" = " '{print $2}' | tr -d '"' | awk -F":" '{print $2}')
+	WIREGUARD_PORT=$(sudo cat ${HOME}/.sentinelnode/wireguard.toml | grep "^listen_port\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	V2RAY_PORT=$(sudo cat ${HOME}/.sentinelnode/v2ray.toml | grep "^listen_port\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	CHAIN_ID=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^id\s*=" | awk -F"=" '{print $2}' | tr -d '"')
+	RPC_ADDRESSES=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^rpc_addresses\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	BACKEND=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^backend\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	HOURLY_PRICES=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "^hourly_prices\s*=" | awk -F" = " '{print $2}' | tr -d '"')
 
 	# if hourly_prices egale to DATACENTER_HOURLY_PRICES
 	if [ "$HOURLY_PRICES" == "$DATACENTER_HOURLY_PRICES" ]
