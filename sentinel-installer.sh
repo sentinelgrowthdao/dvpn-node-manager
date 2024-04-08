@@ -347,10 +347,10 @@ function container_install()
 	then
 		if [[ $(arch) == "arm"* ]]
 		then
-			IMAGE="wajatmaka/sentinel-arm7-debian:latest"
+			IMAGE="wajatmaka/sentinel-arm7-debian:v0.7.1"
 		elif [[ $(arch) == "aarch64"* ]] || [[ $(arch) == "arm64"* ]]
 		then
-			IMAGE="wajatmaka/sentinel-aarch64-alpine:latest"
+			IMAGE="wajatmaka/sentinel-aarch64-alpine:v0.7.1"
 		else
 			output_error "Unsupported architecture. Please use ARMv7 or ARM64."
 			return 1
