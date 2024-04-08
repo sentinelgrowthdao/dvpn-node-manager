@@ -750,7 +750,7 @@ function menu_settings()
 				refresh_config_files || return 1;
 				container_restart || return 1;
 				# Display message indicating that the settings have been updated
-				whiptail --title "Settings Updated" --msgbox "Node settings have been updated." 8 78
+				whiptail --title "Settings Updated" --msgbox "Network settings have been updated." 8 78
 				;;
 			3)
 				ask_node_type || return 1;
@@ -758,7 +758,7 @@ function menu_settings()
 				refresh_config_files || return 1;
 				container_restart || return 1;
 				# Display message indicating that the settings have been updated
-				whiptail --title "Settings Updated" --msgbox "Node settings have been updated." 8 78
+				whiptail --title "Settings Updated" --msgbox "VPN settings have been updated." 8 78
 				;;
 		esac
 	done
