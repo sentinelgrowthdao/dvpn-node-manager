@@ -220,6 +220,13 @@ function check_installation()
 		return 1
 	fi
 	
+	# If container is not initialized, return false
+	if ! docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+	then
+		output_log "Sentinel container is not initialized."
+		return 1
+	fi
+	
 	return 0;
 }
 
