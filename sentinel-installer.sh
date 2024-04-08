@@ -543,7 +543,7 @@ function wallet_node_address()
 function firewall_configure()
 {
 	# Ask if user wants to configure the firewall
-	if ! whiptail --title "Firewall Configuration" --yesno "Do you want to configure the firewall to allow incoming connections to the node?" 8 78
+	if ! whiptail --title "Firewall Configuration" --defaultno --yesno "Do you want to configure the firewall to allow incoming connections to the node?" 8 78
 	then
 		return 0;
 	fi
