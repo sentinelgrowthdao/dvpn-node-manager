@@ -793,6 +793,13 @@ function menu_update()
 ####################################################################################################
 # Main function
 ####################################################################################################
+
+# Check if the script is executed with sudo permissions
+if [ "$(id -u)" != "0" ]; then
+	echo "This script must be run with sudo permissions"
+	exit 1
+fi
+
 while true
 do
 	# Check if installation already exists
