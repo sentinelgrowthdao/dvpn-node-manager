@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Variables
+CONTAINER_NAME="sentinel-dvpn-node"
 OUTPUT_DEBUG=true
 FIREWALL="ufw"
 NODE_MONIKER=""
@@ -18,113 +19,44 @@ DATACENTER_HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF10
 RESIDENTIAL_GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,9204ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1180852ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,122740ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,15342624udvpn"
 RESIDENTIAL_HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,770ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1871892ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,18897ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,10000000udvpn"
 
+PUBLIC_ADDRESS=""
+NODE_ADDRESS=""
 
-function output_log()
+####################################################################################################
+# Configuration functions
+####################################################################################################
+
+# Function to load configuration files into variables
+function load_config_files()
 {
-	if [ "$OUTPUT_DEBUG" = true ]; then
-		local message="$1"
-		echo -e "\e[32m${message}\e[0m"
-	fi
+	# Load config files into variables
+	NODE_MONIKER=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "moniker" | awk -F" = " '{print $2}' | tr -d '"')
+	NODE_TYPE=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "type" | awk -F" = " '{print $2}' | tr -d '"')
+	NODE_IP=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "remote_url" | awk -F" = " '{print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
+	NODE_PORT=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "listen_on" | awk -F" = " '{print $2}' | tr -d '"' | awk -F":" '{print $2}')
+	WIREGUARD_PORT=$(sudo cat ${HOME}/.sentinelnode/wireguard.toml | grep "listen_port" | awk -F" = " '{print $2}' | tr -d '"')
+	V2RAY_PORT=$(sudo cat ${HOME}/.sentinelnode/v2ray.toml | grep "listen_port" | awk -F" = " '{print $2}' | tr -d '"')
+	CHAIN_ID=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "id" | awk -F" = " '{print $2}' | tr -d '"')
+	RPC_ADDRESSES=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "rpc_addresses" | awk -F" = " '{print $2}' | tr -d '"')
+	BACKEND=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "backend" | awk -F" = " '{print $2}' | tr -d '"')
+	HOURLY_PRICES=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "hourly_prices" | awk -F" = " '{print $2}' | tr -d '"')
 
-}
-
-function output_error()
-{
-	local error="$1"
-	echo -e "\e[31m${error}\e[0m"
-	whiptail --title "Error" --msgbox "${error}" 8 78
-	exit 1
-}
-
-function os_ubuntu()
-{
-	version=$(lsb_release -rs)
-	if [[ "$version" == "18."* || "$version" == "19."* || "$version" == "20."* || "$version" == "21."* || "$version" == "22."* || "$version" == "23."* ]]; then
-		return 0  
-	else
-		return 1  
-	fi
-}
-
-function os_raspbian()
-{
-	raspbian_check=$(cat /etc/*-release | grep "ID=raspbian" | wc -l)
-	arm_check=$(uname -a | egrep "aarch64|arm64|armv7" | wc -l)
-	if [ ${raspbian_check} == 1 ] || [ ${arm_check} == 1 ]
+	# if hourly_prices egale to DATACENTER_HOURLY_PRICES
+	if [ "$HOURLY_PRICES" == "$DATACENTER_HOURLY_PRICES" ]
 	then
-		return 0  
+		NODE_LOCATION="datacenter"
 	else
-		return 1 
+		NODE_LOCATION="residential"
 	fi
-}
 
-function start_node()
-{
-	# Read config file and check type of node
-	TYPE=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "type" | awk -F" = " '{print $2}' | tr -d '"')
-	
-	# If node type is wireguard
-	if [ "$TYPE" == "wireguard" ]
-	then
-		# Start WireGuard node
-		sudo docker run -d \
-			--name sentinel-dvpn-node \
-			--restart unless-stopped \
-			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
-			--volume /lib/modules:/lib/modules \
-			--cap-drop ALL \
-			--cap-add NET_ADMIN \
-			--cap-add NET_BIND_SERVICE \
-			--cap-add NET_RAW \
-			--cap-add SYS_MODULE \
-			--sysctl net.ipv4.ip_forward=1 \
-			--sysctl net.ipv6.conf.all.disable_ipv6=0 \
-			--sysctl net.ipv6.conf.all.forwarding=1 \
-			--sysctl net.ipv6.conf.default.forwarding=1 \
-			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
-			--publish ${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp \
-			sentinel-dvpn-node process start || { output_error "Failed to start WireGuard node."; return 1; }
-	elif [ "$TYPE" == "v2ray" ]
-	then
-		# Start V2Ray node
-		sudo docker run -d \
-			--restart unless-stopped \
-			--volume "${HOME}/.sentinelnode:/root/.sentinelnode" \
-			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
-			--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
-			sentinel-dvpn-node process start || { output_error "Failed to start V2Ray node."; return 1; }
-	else
-		output_error "Invalid node type."
-		return 1
-	fi
-	
 	return 0;
 }
 
-function wait_funds()
-{
-	PUBLIC_ADDRESS=$(docker run --rm \
-		--interactive \
-		--tty \
-		--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
-		sentinel-dvpn-node process keys show | awk 'NR==2{print $3}')
-	
-	# If public address doesn't start with "sent" then return error
-	if [[ ! ${PUBLIC_ADDRESS} == "sent"* ]]; then
-		output_error "Invalid public address."
-		return 1
-	fi
-	
-	# Display message to ask for funds
-	whiptail --title "Funds Required" --msgbox "Please send at least 50 \$DVPN to the following address before continuing and starting the node: ${PUBLIC_ADDRESS}" 8 78
-	
-	return 0;
-}
-
+# Function to refresh configuration files
 function refresh_config_files()
 {
 	# Update configuration
-	sudo sed -i "s/moniker = .*/moniker = \"${MONIKER}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set moniker."; return 1; }
+	sudo sed -i "s/moniker = .*/moniker = \"${NODE_MONIKER}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set moniker."; return 1; }
 	
 	# Update chain_id parameter
 	sudo sed -i "s/id = .*/id = \"${CHAIN_ID}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set chain ID."; return 1; }
@@ -168,11 +100,305 @@ function refresh_config_files()
 	return 0;
 }
 
+# Function to configure network settings
+function generate_sentinel_config()
+{
+	# If sentinel config not generated
+	if [ ! -f "${HOME}/.sentinelnode/config.toml" ]
+	then
+		# Generate Sentinel config
+		sudo docker run --rm \
+			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+			${CONTAINER_NAME} process config init || { output_error "Failed to generate Sentinel configuration."; return 1; }
+	fi
+	
+	# If wireguard config not generated
+	if [ ! -f "${HOME}/.sentinelnode/wireguard.toml" ]
+	then
+		# Generate WireGuard config
+		sudo docker run --rm \
+			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+			${CONTAINER_NAME} process wireguard config init || { output_error "Failed to generate WireGuard configuration."; return 1; }
+	fi
+	
+	# If v2ray config not generated
+	if [ ! -f "${HOME}/.sentinelnode/v2ray.toml" ]
+	then
+		# Generate V2Ray config
+		sudo docker run --rm \
+			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+			${CONTAINER_NAME} process v2ray config init || { output_error "Failed to generate V2Ray configuration."; return 1; }
+	fi
+	
+	return 0;
+}
 
-function initialize_wallet()
+# Function to configure network settings
+function generate_certificate()
+{
+	# If certificate already exists, return zero
+	if [ -f "${HOME}/.sentinelnode/tls.crt" ] && [ -f "${HOME}/.sentinelnode/tls.key" ]
+	then
+		return 0
+	fi
+	
+	# Generate certificate
+	sudo openssl req -new \
+	-newkey ec \
+	-pkeyopt ec_paramgen_curve:prime256v1 \
+	-x509 \
+	-sha256 \
+	-days 365 \
+	-nodes \
+	-out ${HOME}/.sentinelnode/tls.crt \
+	-subj "/C=NA/ST=NA/L=./O=NA/OU=./CN=." \
+	-keyout ${HOME}/.sentinelnode/tls.key || { output_error "Failed to generate certificate."; return 1; }
+	
+	sudo chown root:root ${HOME}/.sentinelnode/tls.crt && \
+	sudo chown root:root ${HOME}/.sentinelnode/tls.key || { output_error "Failed to change ownership of certificate files."; return 1; }
+	
+	return 0;
+}
+
+####################################################################################################
+# Utility functions
+####################################################################################################
+
+# Function to check if all dependencies are installed
+function check_installation()
+{
+	# If curl is not installed, return false
+	if ! command -v curl &> /dev/null
+	then
+		output_log "Curl is not installed."
+		return 1
+	fi
+	
+	# If docker is not installed, return false
+	if ! command -v docker &> /dev/null
+	then
+		output_log "Docker is not installed."
+		return 1
+	fi
+	
+	# If sentinel docker image not installed, return false
+	if ! docker image inspect ${CONTAINER_NAME} &> /dev/null
+	then
+		output_log "Sentinel Docker image is not installed."
+		return 1
+	fi
+	
+	# If sentinel config not generated, return false
+	if [ ! -f "${HOME}/.sentinelnode/config.toml" ]
+	then
+		output_log "Sentinel config is not generated."
+		return 1
+	fi
+	
+	# If wireguard config not generated, return false
+	if [ ! -f "${HOME}/.sentinelnode/wireguard.toml" ]
+	then
+		output_log "WireGuard config is not generated."
+		return 1
+	fi
+	
+	# If v2ray config not generated, return false
+	if [ ! -f "${HOME}/.sentinelnode/v2ray.toml" ]
+	then
+		output_log "V2Ray config is not generated."
+		return 1
+	fi
+	
+	
+}
+
+# Function to output log messages
+function output_log()
+{
+	if [ "$OUTPUT_DEBUG" = true ]; then
+		local message="$1"
+		echo -e "\e[32m${message}\e[0m"
+	fi
+
+}
+
+# Function to output error messages
+function output_error()
+{
+	local error="$1"
+	echo -e "\e[31m${error}\e[0m"
+	whiptail --title "Error" --msgbox "${error}" 8 78
+	exit 1
+}
+
+# Function to check if the OS is Ubuntu (Source: https://github.com/roomit-xyz/sentinel-node/blob/main/sentinel-node.sh)
+function os_ubuntu()
+{
+	version=$(lsb_release -rs)
+	if [[ "$version" == "18."* || "$version" == "19."* || "$version" == "20."* || "$version" == "21."* || "$version" == "22."* || "$version" == "23."* ]]; then
+		return 0  
+	else
+		return 1  
+	fi
+}
+
+# Function to check if the OS is Raspbian (Source: https://github.com/roomit-xyz/sentinel-node/blob/main/sentinel-node.sh)
+function os_raspbian()
+{
+	raspbian_check=$(cat /etc/*-release | grep "ID=raspbian" | wc -l)
+	arm_check=$(uname -a | egrep "aarch64|arm64|armv7" | wc -l)
+	if [ ${raspbian_check} == 1 ] || [ ${arm_check} == 1 ]
+	then
+		return 0  
+	else
+		return 1 
+	fi
+}
+
+####################################################################################################
+# Docker functions
+####################################################################################################
+
+# Function to install Docker if not already installed
+function install_docker()
+{
+	# Check if Docker is installed return 0
+	if command -v docker &> /dev/null
+	then
+		return 0;
+	fi
+	
+	# Install dependencies
+	sudo apt install -y curl git openssl || { output_error "Failed to install dependencies."; return 1; }
+	
+	# Download and execute the Docker installation script
+	curl -fsSL get.docker.com | sudo sh || { output_error "Failed to install Docker."; return 1; }
+	
+	# Enable and start the Docker service
+	sudo systemctl enable --now docker || { output_error "Failed to enable Docker."; return 1; }
+
+	# Add the current user to the Docker group
+	sudo usermod -aG docker $(whoami) || { output_error "Failed to add user to Docker group."; return 1; }
+
+	# Re-login the user to apply group changes
+	sudo -i -u $(whoami) || { output_error "Failed to re-login user."; return 1; }
+	
+	# Check if Docker is now installed
+	if ! command -v docker &> /dev/null
+	then
+		output_error "Docker installation failed.";
+		return 1;
+	fi
+	
+	return 0;
+}
+
+
+####################################################################################################
+# Container functions
+####################################################################################################
+
+# Function to install sentinel image
+function container_install()
+{
+	# Check if image already downloaded
+	if docker image inspect ${CONTAINER_NAME} &> /dev/null
+	then
+		return 0
+	fi
+	
+	if os_ubuntu
+	then
+		IMAGE="ghcr.io/sentinel-official/dvpn-node:latest"
+	elif os_raspbian
+	then
+		if [[ $(arch) == "arm"* ]]
+		then
+			IMAGE="wajatmaka/sentinel-arm7-debian:latest"
+		elif [[ $(arch) == "aarch64"* ]] || [[ $(arch) == "arm64"* ]]
+		then
+			IMAGE="wajatmaka/sentinel-aarch64-alpine:latest"
+		else
+			output_error "Unsupported architecture. Please use ARMv7 or ARM64."
+			return 1
+		fi
+	else
+		output_error "Unsupported OS. Please use Ubuntu or Raspbian."
+		return 1
+	fi
+	
+	# Pull the Sentinel image
+	docker pull ${IMAGE} || { output_error "Failed to pull the Sentinel image."; return 1; }
+	docker tag ${IMAGE} ${CONTAINER_NAME} || { output_error "Failed to tag the Sentinel image."; return 1; }
+	
+	return 0;
+}
+
+# Function to start the Docker container
+function container_start()
+{
+	# Read config file and check type of node
+	TYPE=$(sudo cat ${HOME}/.sentinelnode/config.toml | grep "type" | awk -F" = " '{print $2}' | tr -d '"')
+	
+	# If node type is wireguard
+	if [ "$TYPE" == "wireguard" ]
+	then
+		# Start WireGuard node
+		sudo docker run -d \
+			--restart unless-stopped \
+			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+			--volume /lib/modules:/lib/modules \
+			--cap-drop ALL \
+			--cap-add NET_ADMIN \
+			--cap-add NET_BIND_SERVICE \
+			--cap-add NET_RAW \
+			--cap-add SYS_MODULE \
+			--sysctl net.ipv4.ip_forward=1 \
+			--sysctl net.ipv6.conf.all.disable_ipv6=0 \
+			--sysctl net.ipv6.conf.all.forwarding=1 \
+			--sysctl net.ipv6.conf.default.forwarding=1 \
+			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
+			--publish ${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp \
+			${CONTAINER_NAME} process start || { output_error "Failed to start WireGuard node."; return 1; }
+	elif [ "$TYPE" == "v2ray" ]
+	then
+		# Start V2Ray node
+		sudo docker run -d \
+			--restart unless-stopped \
+			--volume "${HOME}/.sentinelnode:/root/.sentinelnode" \
+			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
+			--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
+			${CONTAINER_NAME} process start || { output_error "Failed to start V2Ray node."; return 1; }
+	else
+		output_error "Invalid node type."
+		return 1
+	fi
+	
+	return 0;
+}
+
+# Function to stop the Docker container
+function container_stop()
+{
+	docker stop ${CONTAINER_NAME} || { output_error "Failed to stop the Sentinel container."; return 1; }
+	return 0;
+}
+
+# Function to restart the Docker container
+function container_restart()
+{
+	docker restart ${CONTAINER_NAME} || { output_error "Failed to restart the Sentinel container."; return 1; }
+	return 0;
+}
+
+####################################################################################################
+# Wallet functions
+####################################################################################################
+
+function wallet_initialization()
 {
 	# Check if wallet exists
-	if docker run --rm --interactive --tty --volume ${HOME}/.sentinelnode:/root/.sentinelnode sentinel-dvpn-node process keys list | grep -q "sentnode"
+	if docker run --rm --interactive --tty --volume ${HOME}/.sentinelnode:/root/.sentinelnode ${CONTAINER_NAME} process keys list | grep -q "sentnode"
 	then
 		# Ask user if they want to delete the existing wallet
 		if whiptail --title "Wallet Exists" --yesno "A wallet already exists. Do you want to delete the existing wallet and continue?" 8 78
@@ -182,7 +408,7 @@ function initialize_wallet()
 				--interactive \
 				--tty \
 				--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
-				sentinel-dvpn-node process keys delete
+				${CONTAINER_NAME} process keys delete
 		else
 			return 0;
 		fi
@@ -199,14 +425,14 @@ function initialize_wallet()
 		echo "$MNEMONIC" | sudo docker run --rm \
 			--interactive \
 			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
-			sentinel-dvpn-node process keys add --recover || { output_error "Failed to restore wallet."; return 1; }
+			${CONTAINER_NAME} process keys add --recover || { output_error "Failed to restore wallet."; return 1; }
 	else
 		# Create new wallet
 		OUTPUT=$(docker run --rm \
 					--interactive \
 					--tty \
 					--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
-					sentinel-dvpn-node process keys add)
+					${CONTAINER_NAME} process keys add)
 		
 		output_log "Wallet creation output: ${OUTPUT}"
 		
@@ -237,7 +463,37 @@ function initialize_wallet()
 	return 0;
 }
 
-function open_firewall()
+# Function to get the public address of the wallet
+function wallet_public_address()
+{
+	PUBLIC_ADDRESS=$(docker run --rm \
+		--interactive \
+		--tty \
+		--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+		${CONTAINER_NAME} process keys show | awk 'NR==2{print $3}')
+	
+	return 0;
+}
+
+# Function to get the node address
+function wallet_node_address()
+{
+	NODE_ADDRESS=$(docker run --rm \
+		--interactive \
+		--tty \
+		--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+		${CONTAINER_NAME} process keys show | awk 'NR==2{print $2}')
+	
+	return 0;
+}
+
+
+####################################################################################################
+# Firewall functions
+####################################################################################################
+
+# Function to open the firewall
+function firewall_configure()
 {
 	# Check if UFW is not installed
 	if ! command -v ufw &> /dev/null
@@ -273,230 +529,103 @@ function open_firewall()
 	return 0;
 }
 
+####################################################################################################
+# Prompt functions
+####################################################################################################
+
+# Function to ask for remote IP
 function ask_remote_ip()
 {
-	# Retrieve the current public IP using wget and sed
-	ip=$(wget -q -O - checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//')
-
-	# Ask for remote IP
-	NODE_IP=$(whiptail --inputbox "Please enter your node's public IP address:" 8 78 --title "Node IP" --default "$ip" 3>&1 1>&2 2>&3) || { output_error "Failed to get node IP."; return 1; }
+	# If NODE_IP egale to 0.0.0.0, then retrieve the current public IP
+	if [ "$NODE_IP" == "0.0.0.0" ]
+	then
+		# Retrieve the current public IP using wget and sed
+		NODE_IP=$(wget -q -O - checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//')
+	fi
 	
-	# Update configuration
-	refresh_config_files || return 1;
+	# Ask for remote IP
+	NODE_IP=$(whiptail --inputbox "Please enter your node's public IP address:" 8 78 "$NODE_IP" --title "Node IP" 3>&1 1>&2 2>&3) || { output_error "Failed to get node IP."; return 1; }
 	
 	return 0;
 }
 
+# Function to ask for node location
 function ask_node_location()
 {
-    NODE_LOCATION=$(whiptail --title "Node Location" --radiolist "Please select the type of validation node you want to run:" 15 78 2 \
-        "datacenter" "Datacenter" ON \
-        "residential" "Residential" OFF 3>&1 1>&2 2>&3) || { output_error "Failed to get validation node type."; return 1; }
+	# Set initial state based on current $NODE_LOCATION
+	local datacenter_state="OFF"
+	local residential_state="OFF"
 
-    # Update configuration
-    refresh_config_files || return 1;
+	if [ "$NODE_LOCATION" == "datacenter" ]; then
+		datacenter_state="ON"
+	elif [ "$NODE_LOCATION" == "residential" ]; then
+		residential_state="ON"
+	fi
 
-    return 0;
-}
+	# Ask for node location using whiptail
+	NODE_LOCATION=$(whiptail --title "Node Location" --radiolist "Please select the type of validation node you want to run:" 15 78 2 \
+		"datacenter" "Datacenter" $datacenter_state \
+		"residential" "Residential" $residential_state 3>&1 1>&2 2>&3) || { output_error "Failed to get validation node type."; return 1; }
 
-function ask_node_type()
-{
-	NODE_TYPE=$(whiptail --title "Node Type" --radiolist "Please select the type of node you want to run:" 15 78 2 \
-		"wireguard" "WireGuard" ON \
-		"v2ray" "V2Ray" OFF 3>&1 1>&2 2>&3) || { output_error "Failed to get node type."; return 1; }
-	
-	# Update configuration
-	refresh_config_files || return 1;
-	
 	return 0;
 }
 
+# Function to ask for node type
+function ask_node_type()
+{
+	# Set initial state based on current $NODE_TYPE
+	local wireguard_state="OFF"
+	local v2ray_state="OFF"
+
+	if [ "$NODE_TYPE" == "wireguard" ]; then
+		wireguard_state="ON"
+	elif [ "$NODE_TYPE" == "v2ray" ]; then
+		v2ray_state="ON"
+	fi
+
+	# Ask for node type using whiptail
+	NODE_TYPE=$(whiptail --title "Node Type" --radiolist "Please select the type of node you want to run:" 15 78 2 \
+		"wireguard" "WireGuard" $wireguard_state \
+		"v2ray" "V2Ray" $v2ray_state 3>&1 1>&2 2>&3) || { output_error "Failed to get node type."; return 1; }
+
+	return 0;
+}
+
+# Function to ask for moniker
 function ask_moniker()
 {
 	# Ask for moniker
-	MONIKER=$(whiptail --inputbox "Please enter your node's moniker:" 8 78 --title "Node Moniker" 3>&1 1>&2 2>&3) || { output_error "Failed to get moniker."; return 1; }
-	
-	# Update configuration
-	refresh_config_files || return 1;
+	NODE_MONIKER=$(whiptail --inputbox "Please enter your node's moniker:" 8 78 "$NODE_MONIKER" --title "Node Moniker" 3>&1 1>&2 2>&3) || { output_error "Failed to get moniker."; return 1; }
 	
 	return 0;
 }
 
-function generate_sentinel_config()
+####################################################################################################
+# Messages functions
+####################################################################################################
+
+# Function to display a message to wait for funds
+function message_wait_funds()
 {
-	# If sentinel config not generated
-	if [ ! -f "${HOME}/.sentinelnode/config.toml" ]
-	then
-		# Generate Sentinel config
-		sudo docker run --rm \
-			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
-			sentinel-dvpn-node process config init || { output_error "Failed to generate Sentinel configuration."; return 1; }
+	# Get public address
+	wallet_public_address || { output_error "Failed to get public address."; return 1; }
+	
+	# If public address doesn't start with "sent" then return error
+	if [[ ! ${PUBLIC_ADDRESS} == "sent"* ]]; then
+		output_error "Invalid public address."
+		return 1
 	fi
 	
-	# If wireguard config not generated
-	if [ ! -f "${HOME}/.sentinelnode/wireguard.toml" ]
-	then
-		# Generate WireGuard config
-		sudo docker run --rm \
-			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
-			sentinel-dvpn-node process wireguard config init || { output_error "Failed to generate WireGuard configuration."; return 1; }
-	fi
-	
-	# If v2ray config not generated
-	if [ ! -f "${HOME}/.sentinelnode/v2ray.toml" ]
-	then
-		# Generate V2Ray config
-		sudo docker run --rm \
-			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
-			sentinel-dvpn-node process v2ray config init || { output_error "Failed to generate V2Ray configuration."; return 1; }
-	fi
-	
-	# Refresh configuration files and don't ouput errors
-	refresh_config_files || return 1;
+	# Display message to wait for funds
+	whiptail --title "Funds Required" --msgbox "Please send at least 50 \$DVPN to the following address before continuing and starting the node: ${PUBLIC_ADDRESS}" 8 78
 	
 	return 0;
 }
 
-function generate_certificate()
-{
-	# if certificate already exists, return zero
-	if [ -f "${HOME}/.sentinelnode/tls.crt" ] && [ -f "${HOME}/.sentinelnode/tls.key" ]
-	then
-		return 0
-	fi
-	
-	# Generate certificate
-	sudo openssl req -new \
-	-newkey ec \
-	-pkeyopt ec_paramgen_curve:prime256v1 \
-	-x509 \
-	-sha256 \
-	-days 365 \
-	-nodes \
-	-out ${HOME}/.sentinelnode/tls.crt \
-	-subj "/C=NA/ST=NA/L=./O=NA/OU=./CN=." \
-	-keyout ${HOME}/.sentinelnode/tls.key || { output_error "Failed to generate certificate."; return 1; }
-	
-	sudo chown root:root ${HOME}/.sentinelnode/tls.crt && \
-	sudo chown root:root ${HOME}/.sentinelnode/tls.key || { output_error "Failed to change ownership of certificate files."; return 1; }
-	
-	return 0;
-}
 
-# Function to install sentinel image
-function install_sentinel_container()
-{
-	# Check if image already downloaded
-	if docker image inspect sentinel-dvpn-node &> /dev/null
-	then
-		return 0
-	fi
-	
-	if os_ubuntu
-	then
-		IMAGE="ghcr.io/sentinel-official/dvpn-node:latest"
-	elif os_raspbian
-	then
-		if [[ $(arch) == "arm"* ]]
-		then
-			IMAGE="wajatmaka/sentinel-arm7-debian:latest"
-		elif [[ $(arch) == "aarch64"* ]] || [[ $(arch) == "arm64"* ]]
-		then
-			IMAGE="wajatmaka/sentinel-aarch64-alpine:latest"
-		else
-			output_error "Unsupported architecture. Please use ARMv7 or ARM64."
-			return 1
-		fi
-	else
-		output_error "Unsupported OS. Please use Ubuntu or Raspbian."
-		return 1
-	fi
-	
-	output_log "Pulling the Sentinel image: ${IMAGE}"
-	
-	# Pull the Sentinel image
-	docker pull ${IMAGE} || { output_error "Failed to pull the Sentinel image."; return 1; }
-	docker tag ${IMAGE} sentinel-dvpn-node || { output_error "Failed to tag the Sentinel image."; return 1; }
-	
-	return 0;
-}
-
-# Function to install Docker if not already installed
-function install_docker()
-{
-	# Check if Docker is installed return 0
-	if command -v docker &> /dev/null
-	then
-		return 0
-	fi
-	
-	# Install dependencies
-	sudo apt install -y curl git openssl || { output_error "Failed to install dependencies."; return 1; }
-	
-	# Download and execute the Docker installation script
-	curl -fsSL get.docker.com | sudo sh || { output_error "Failed to install Docker."; return 1; }
-	
-	# Enable and start the Docker service
-	sudo systemctl enable --now docker || { output_error "Failed to enable Docker."; return 1; }
-
-	# Add the current user to the Docker group
-	sudo usermod -aG docker $(whoami) || { output_error "Failed to add user to Docker group."; return 1; }
-
-	# Re-login the user to apply group changes
-	sudo -i -u $(whoami) || { output_error "Failed to re-login user."; return 1; }
-	
-	# Check if Docker is now installed
-	if ! command -v docker &> /dev/null
-	then
-		output_error "Docker installation failed.";
-		return 1
-	fi
-	
-	return 0
-}
-
-
-# Function to check if all dependencies are installed
-function check_installation()
-{
-	# If curl is not installed, return false
-	if ! command -v curl &> /dev/null
-	then
-		return 1
-	fi
-	
-	# If docker is not installed, return false
-	if ! command -v docker &> /dev/null
-	then
-		return 1
-	fi
-	
-	# If sentinel docker image not installed, return false
-	if ! docker image inspect sentinel-dvpn-node &> /dev/null
-	then
-		return 1
-	fi
-	
-	# If sentinel config not generated, return false
-	if [ ! -f "${HOME}/.sentinelnode/config.toml" ]
-	then
-		return 1
-	fi
-	
-	# If wireguard config not generated, return false
-	if [ ! -f "${HOME}/.sentinelnode/config/wireguard.toml" ]
-	then
-		return 1
-	fi
-	
-	# If v2ray config not generated, return false
-	if [ ! -f "${HOME}/.sentinelnode/config/v2ray.toml" ]
-	then
-		return 1
-	fi
-	
-	
-}
+####################################################################################################
+# Menu functions
+####################################################################################################
 
 # Function to display the installation menu
 function menu_installation()
@@ -518,7 +647,7 @@ function menu_installation()
 	
 	install_docker || return 1;
 	
-	install_sentinel_container || return 1;
+	container_install || return 1;
 	
 	if [ ! -d "${HOME}/.sentinelnode" ]; then
 		sudo mkdir ${HOME}/.sentinelnode || { output_error "Failed to create Sentinel node directory."; return 1; }
@@ -527,6 +656,8 @@ function menu_installation()
 	generate_certificate || return 1;
 	
 	generate_sentinel_config || return 1;
+
+	load_config_files || return 1;
 	
 	ask_moniker || return 1;
 	
@@ -538,14 +669,14 @@ function menu_installation()
 	
 	refresh_config_files || return 1;
 	
-	open_firewall || return 1;
+	firewall_configure || return 1;
 	
-	initialize_wallet || return 1;
+	wallet_initialization| return 1;
 	
-	wait_funds || return 1;
+	message_wait_funds || return 1;
 	
 	# Start the Sentinel node
-	start_node || return 1;
+	container_start || return 1;
 	
 	# Display message to user
 	whiptail --title "Installation Complete" --msgbox "The Sentinel node has been successfully installed and started!\nYou can now access the node dashboard by visiting the following URL:\n\nhttps://${NODE_IP}:${NODE_PORT}/status" 12 100
@@ -556,23 +687,120 @@ function menu_installation()
 # Function to display the configuration menu
 function menu_configuration()
 {
-	whiptail --title "Welcome to Sentinel Configuration" --msgbox "Welcome to the Sentinel configuration process. This configuration will be done in multiple steps and you will be guided throughout the process." 8 78
-}
+	# Load configuration into variables
+	load_config_files || return 1;
 
-# Main function
-function main()
+	choice=$(whiptail --title "Welcome to Sentinel Configuration" --menu "Welcome to the Sentinel configuration process. Please select an option:" 15 78 5 \
+		"Settings" "Change node configuration" \
+		"Wallet" "Manage node wallet" \
+		"Maintenance" "Perform maintenance actions" \
+		"Update" "Update the node" \
+		--ok-button "Select" --cancel-button "Finish" 3>&1 1>&2 2>&3)
+
+	if [ $? -eq 1 ]; then  # Check if the user pressed the 'Finish' button, which is the cancel button now
+		exit 0
+	fi
+
+	# Handle selected option
+	case $choice in
+		"Settings")
+			menu_settings
+			;;
+		"Wallet")
+			menu_wallet
+			;;
+		"Maintenance")
+			menu_maintenance
+			;;
+		"Update")
+			menu_update
+			;;
+	esac
+}
+# Function to display the settings menu
+function menu_settings()
 {
-	while true
+	while true;
 	do
-		# Check if installation already exists
-		if check_installation
-		then
-			menu_configuration;
-		else
-			menu_installation;
-			exit 0;
+		CHOICE=$(whiptail --title "Node Settings" --menu "Choose a settings group to configure:" 15 60 5 \
+			"1" "Node Settings" \
+			"2" "Network Settings" \
+			"3" "VPN Settings" \
+			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3)
+
+		EXITSTATUS=$?
+		if [ $EXITSTATUS -eq 1 ]; then
+			# If user chooses 'Back', break the loop to return to previous menu
+			break
 		fi
+
+		case $CHOICE in
+			1)
+				ask_moniker || return 1;
+				ask_node_location || return 1;
+
+				refresh_config_files || return 1;
+				container_restart || return 1;
+				# Display message indicating that the settings have been updated
+				whiptail --title "Settings Updated" --msgbox "Node settings have been updated." 8 78
+				;;
+			2)
+				ask_remote_ip || return 1;
+
+				refresh_config_files || return 1;
+				container_restart || return 1;
+				# Display message indicating that the settings have been updated
+				whiptail --title "Settings Updated" --msgbox "Node settings have been updated." 8 78
+				;;
+			3)
+				ask_node_type || return 1;
+
+				refresh_config_files || return 1;
+				container_restart || return 1;
+				# Display message indicating that the settings have been updated
+				whiptail --title "Settings Updated" --msgbox "Node settings have been updated." 8 78
+				;;
+		esac
 	done
 }
-# Call the main function
-main
+
+# Function to display the wallet menu
+function menu_wallet()
+{
+	echo "menu_wallet"
+}
+
+# Function to display the maintenance menu
+function menu_maintenance()
+{
+	echo "menu_maintenance"
+}
+
+# Function to update the Sentinel image
+function menu_update()
+{
+	container_install || return 1;
+
+	container_restart || return 1;
+
+	# Display message indicating that the image is up to date
+	whiptail --title "Update Complete" --msgbox "Sentinel image is up to date." 8 78
+
+	return 0;
+}
+
+
+####################################################################################################
+# Main function
+####################################################################################################
+while true
+do
+	# Check if installation already exists
+	if check_installation
+	then
+		menu_configuration;
+	else
+		menu_installation;
+		exit 0;
+	fi
+done
