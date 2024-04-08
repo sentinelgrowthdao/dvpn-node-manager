@@ -392,6 +392,7 @@ function container_start()
 	then
 		# Start WireGuard node
 		docker run -d \
+			--name ${CONTAINER_NAME} \
 			--restart unless-stopped \
 			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 			--volume /lib/modules:/lib/modules \
@@ -411,6 +412,7 @@ function container_start()
 	then
 		# Start V2Ray node
 		docker run -d \
+			--name ${CONTAINER_NAME} \
 			--restart unless-stopped \
 			--volume "${USER_HOME}/.sentinelnode:/root/.sentinelnode" \
 			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
