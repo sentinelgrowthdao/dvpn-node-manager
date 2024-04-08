@@ -735,7 +735,7 @@ function menu_installation()
 	
 	firewall_configure || return 1;
 	
-	wallet_initialization| return 1;
+	wallet_initialization || return 1;
 	
 	message_wait_funds || return 1;
 	
