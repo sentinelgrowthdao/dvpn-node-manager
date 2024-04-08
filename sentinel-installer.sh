@@ -646,15 +646,13 @@ function message_wait_funds()
 function message_docker_reboot_required()
 {
 	# Display message to inform about Docker installation and reboot requirement
-	whiptail --title "Docker Installation" --msgbox "Docker has been successfully installed. A system reboot is required for the changes to take effect. Please choose an option below:" 10 78 \
-		--ok-button "Reboot Now" --cancel-button "Quit Without Reboot"
-
-	# Check the exit status of whiptail
-	if [ $? -eq 0 ]; then
+	if whiptail --title "Docker Installation Complete" --yesno "Docker has been successfully installed on your system. For the installation to take full effect, a system reboot is required. Please select 'Reboot Now' to restart your system immediately, or choose 'Quit Without Reboot' if you prefer to reboot later at your own convenience." 12 78 --yes-button "Reboot Now" --no-button "Quit Without Reboot"; then
 		# Reboot the system
+		echo "Rebooting now..."
 		reboot
 	else
 		# Quit without rebooting
+		echo "Installation complete. Please reboot your system before continuing."
 		exit 0
 	fi
 }
