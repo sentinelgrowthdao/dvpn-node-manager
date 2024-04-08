@@ -457,8 +457,11 @@ function wallet_initialization()
 				--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 				${CONTAINER_NAME} process keys delete
 		else
+			output_log "Wallet already exists."
 			return 0;
 		fi
+	else
+		output_log "No wallet found."
 	fi
 	
 	# Ask if user wants to restore wallet
@@ -506,6 +509,8 @@ function wallet_initialization()
 		whiptail --title "Wallet Mnemonic" --msgbox "Please save the following mnemonic. This will be required to restore your wallet in the future.\n\nMnemonic:\n${formatted_mnemonic}" 20 100
 		
 	fi
+	
+	output_log "Wallet initialized."
 	
 	return 0;
 }
