@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# User and home directory
+USER_NAME=${SUDO_USER:-$(whoami)}
+USER_HOME=$(getent passwd ${USER_NAME} | cut -d: -f6)
+
 # Variables
 CONTAINER_NAME="sentinel-dvpn-node"
 OUTPUT_DEBUG=true
@@ -30,16 +34,16 @@ NODE_ADDRESS=""
 function load_config_files()
 {
 	# Load config files into variables
-	NODE_MONIKER=$(cat ${HOME}/.sentinelnode/config.toml | grep "^moniker\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	NODE_TYPE=$(cat ${HOME}/.sentinelnode/config.toml | grep "^type\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	NODE_IP=$(cat ${HOME}/.sentinelnode/config.toml | grep "^remote_url\s*=" | awk -F" = " '{print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
-	NODE_PORT=$(cat ${HOME}/.sentinelnode/config.toml | grep "^listen_on\s*=" | awk -F" = " '{print $2}' | tr -d '"' | awk -F":" '{print $2}')
-	WIREGUARD_PORT=$(cat ${HOME}/.sentinelnode/wireguard.toml | grep "^listen_port\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	V2RAY_PORT=$(cat ${HOME}/.sentinelnode/v2ray.toml | grep "^listen_port\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	CHAIN_ID=$(cat ${HOME}/.sentinelnode/config.toml | grep "^id\s*=" | awk -F"=" '{print $2}' | tr -d '"')
-	RPC_ADDRESSES=$(cat ${HOME}/.sentinelnode/config.toml | grep "^rpc_addresses\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	BACKEND=$(cat ${HOME}/.sentinelnode/config.toml | grep "^backend\s*=" | awk -F" = " '{print $2}' | tr -d '"')
-	HOURLY_PRICES=$(cat ${HOME}/.sentinelnode/config.toml | grep "^hourly_prices\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	NODE_MONIKER=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^moniker\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	NODE_TYPE=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^type\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	NODE_IP=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^remote_url\s*=" | awk -F" = " '{print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
+	NODE_PORT=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^listen_on\s*=" | awk -F" = " '{print $2}' | tr -d '"' | awk -F":" '{print $2}')
+	WIREGUARD_PORT=$(cat ${USER_HOME}/.sentinelnode/wireguard.toml | grep "^listen_port\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	V2RAY_PORT=$(cat ${USER_HOME}/.sentinelnode/v2ray.toml | grep "^listen_port\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	CHAIN_ID=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^id\s*=" | awk -F"=" '{print $2}' | tr -d '"')
+	RPC_ADDRESSES=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^rpc_addresses\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	BACKEND=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^backend\s*=" | awk -F" = " '{print $2}' | tr -d '"')
+	HOURLY_PRICES=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "^hourly_prices\s*=" | awk -F" = " '{print $2}' | tr -d '"')
 
 	# if hourly_prices egale to DATACENTER_HOURLY_PRICES
 	if [ "$HOURLY_PRICES" == "$DATACENTER_HOURLY_PRICES" ]
@@ -56,45 +60,45 @@ function load_config_files()
 function refresh_config_files()
 {
 	# Update configuration
-	sed -i "s/moniker = .*/moniker = \"${NODE_MONIKER}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set moniker."; return 1; }
+	sed -i "s/moniker = .*/moniker = \"${NODE_MONIKER}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set moniker."; return 1; }
 	
 	# Update chain_id parameter
-	sed -i "s/id = .*/id = \"${CHAIN_ID}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set chain ID."; return 1; }
+	sed -i "s/id = .*/id = \"${CHAIN_ID}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set chain ID."; return 1; }
 	
 	# Update rpc_addresses parameter
-	sed -i "s/rpc_addresses = .*/rpc_addresses = \"${RPC_ADDRESSES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote RPC."; return 1; }
+	sed -i "s/rpc_addresses = .*/rpc_addresses = \"${RPC_ADDRESSES//\//\\/}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote RPC."; return 1; }
 	
 	# Update node type parameter
-	sed -i "s/type = .*/type = \"${NODE_TYPE}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set node type."; return 1; }
+	sed -i "s/type = .*/type = \"${NODE_TYPE}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set node type."; return 1; }
 	
 	# Update remote_url parameter
-	sed -i "s/listen_on = .*/listen_on = \"0\\.0\\.0\\.0:${NODE_PORT}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
+	sed -i "s/listen_on = .*/listen_on = \"0\\.0\\.0\\.0:${NODE_PORT}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
 	
 	# Update remote_url parameter
-	sed -i "s/remote_url = .*/remote_url = \"https:\/\/${NODE_IP}:${NODE_PORT}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
+	sed -i "s/remote_url = .*/remote_url = \"https:\/\/${NODE_IP}:${NODE_PORT}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
 	
 	# Update backend parameter
-	sed -i "s/backend = .*/backend = \"${BACKEND}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set backend."; return 1; }
+	sed -i "s/backend = .*/backend = \"${BACKEND}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set backend."; return 1; }
 	
 	# Update WireGuard port
-	sed -i "s/listen_port = .*/listen_port = ${WIREGUARD_PORT}/g" ${HOME}/.sentinelnode/wireguard.toml || { output_error "Failed to set WireGuard port."; return 1; }
+	sed -i "s/listen_port = .*/listen_port = ${WIREGUARD_PORT}/g" ${USER_HOME}/.sentinelnode/wireguard.toml || { output_error "Failed to set WireGuard port."; return 1; }
 	
 	# Update V2Ray port
-	sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${HOME}/.sentinelnode/v2ray.toml || { output_error "Failed to set V2Ray port."; return 1; }
+	sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${USER_HOME}/.sentinelnode/v2ray.toml || { output_error "Failed to set V2Ray port."; return 1; }
 	
 	if [ "$NODE_LOCATION" == "residential" ]
 	then
 		# Update gigabyte_prices parameter
-		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${RESIDENTIAL_GIGABYTE_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
+		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${RESIDENTIAL_GIGABYTE_PRICES//\//\\/}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
 		
 		# Update hourly_prices parameter
-		sed -i "s/hourly_prices = .*/hourly_prices = \"${RESIDENTIAL_HOURLY_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
+		sed -i "s/hourly_prices = .*/hourly_prices = \"${RESIDENTIAL_HOURLY_PRICES//\//\\/}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
 	else
 		# Update gigabyte_prices parameter
-		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${DATACENTER_GIGABYTE_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
+		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${DATACENTER_GIGABYTE_PRICES//\//\\/}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
 		
 		# Update hourly_prices parameter
-		sed -i "s/hourly_prices = .*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
+		sed -i "s/hourly_prices = .*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
 	fi
 
 	return 0;
@@ -104,29 +108,29 @@ function refresh_config_files()
 function generate_sentinel_config()
 {
 	# If sentinel config not generated
-	if [ ! -f "${HOME}/.sentinelnode/config.toml" ]
+	if [ ! -f "${USER_HOME}/.sentinelnode/config.toml" ]
 	then
 		# Generate Sentinel config
 		docker run --rm \
-			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 			${CONTAINER_NAME} process config init || { output_error "Failed to generate Sentinel configuration."; return 1; }
 	fi
 	
 	# If wireguard config not generated
-	if [ ! -f "${HOME}/.sentinelnode/wireguard.toml" ]
+	if [ ! -f "${USER_HOME}/.sentinelnode/wireguard.toml" ]
 	then
 		# Generate WireGuard config
 		docker run --rm \
-			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 			${CONTAINER_NAME} process wireguard config init || { output_error "Failed to generate WireGuard configuration."; return 1; }
 	fi
 	
 	# If v2ray config not generated
-	if [ ! -f "${HOME}/.sentinelnode/v2ray.toml" ]
+	if [ ! -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
 	then
 		# Generate V2Ray config
 		docker run --rm \
-			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 			${CONTAINER_NAME} process v2ray config init || { output_error "Failed to generate V2Ray configuration."; return 1; }
 	fi
 	
@@ -137,7 +141,7 @@ function generate_sentinel_config()
 function generate_certificate()
 {
 	# If certificate already exists, return zero
-	if [ -f "${HOME}/.sentinelnode/tls.crt" ] && [ -f "${HOME}/.sentinelnode/tls.key" ]
+	if [ -f "${USER_HOME}/.sentinelnode/tls.crt" ] && [ -f "${USER_HOME}/.sentinelnode/tls.key" ]
 	then
 		return 0
 	fi
@@ -150,12 +154,12 @@ function generate_certificate()
 	-sha256 \
 	-days 365 \
 	-nodes \
-	-out ${HOME}/.sentinelnode/tls.crt \
+	-out ${USER_HOME}/.sentinelnode/tls.crt \
 	-subj "/C=NA/ST=NA/L=./O=NA/OU=./CN=." \
-	-keyout ${HOME}/.sentinelnode/tls.key || { output_error "Failed to generate certificate."; return 1; }
+	-keyout ${USER_HOME}/.sentinelnode/tls.key || { output_error "Failed to generate certificate."; return 1; }
 	
-	chown root:root ${HOME}/.sentinelnode/tls.crt && \
-	chown root:root ${HOME}/.sentinelnode/tls.key || { output_error "Failed to change ownership of certificate files."; return 1; }
+	chown root:root ${USER_HOME}/.sentinelnode/tls.crt && \
+	chown root:root ${USER_HOME}/.sentinelnode/tls.key || { output_error "Failed to change ownership of certificate files."; return 1; }
 	
 	return 0;
 }
@@ -196,21 +200,21 @@ function check_installation()
 	fi
 	
 	# If sentinel config not generated, return false
-	if [ ! -f "${HOME}/.sentinelnode/config.toml" ]
+	if [ ! -f "${USER_HOME}/.sentinelnode/config.toml" ]
 	then
 		output_log "Sentinel config is not generated."
 		return 1
 	fi
 	
 	# If wireguard config not generated, return false
-	if [ ! -f "${HOME}/.sentinelnode/wireguard.toml" ]
+	if [ ! -f "${USER_HOME}/.sentinelnode/wireguard.toml" ]
 	then
 		output_log "WireGuard config is not generated."
 		return 1
 	fi
 	
 	# If v2ray config not generated, return false
-	if [ ! -f "${HOME}/.sentinelnode/v2ray.toml" ]
+	if [ ! -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
 	then
 		output_log "V2Ray config is not generated."
 		return 1
@@ -319,7 +323,7 @@ function docker_usermod()
 	# Check if the user is in the docker group
 	if ! groups | grep -q "\bdocker\b"; then
 		# Add the user to the docker group
-		usermod -aG docker ${SUDO_USER:-$(whoami)} || { output_error "Failed to add user to docker group."; return 1; }
+		usermod -aG docker ${USER_NAME} || { output_error "Failed to add user to docker group."; return 1; }
 		output_log "User added to docker group."
 	fi
 	
@@ -371,7 +375,7 @@ function container_install()
 function container_start()
 {
 	# Read config file and check type of node
-	TYPE=$(cat ${HOME}/.sentinelnode/config.toml | grep "type" | awk -F" = " '{print $2}' | tr -d '"')
+	TYPE=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "type" | awk -F" = " '{print $2}' | tr -d '"')
 	
 	# If node type is wireguard
 	if [ "$TYPE" == "wireguard" ]
@@ -379,7 +383,7 @@ function container_start()
 		# Start WireGuard node
 		docker run -d \
 			--restart unless-stopped \
-			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 			--volume /lib/modules:/lib/modules \
 			--cap-drop ALL \
 			--cap-add NET_ADMIN \
@@ -398,7 +402,7 @@ function container_start()
 		# Start V2Ray node
 		docker run -d \
 			--restart unless-stopped \
-			--volume "${HOME}/.sentinelnode:/root/.sentinelnode" \
+			--volume "${USER_HOME}/.sentinelnode:/root/.sentinelnode" \
 			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
 			--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
 			${CONTAINER_NAME} process start || { output_error "Failed to start V2Ray node."; return 1; }
@@ -431,7 +435,7 @@ function container_restart()
 function wallet_initialization()
 {
 	# Check if wallet exists
-	if docker run --rm --interactive --tty --volume ${HOME}/.sentinelnode:/root/.sentinelnode ${CONTAINER_NAME} process keys list | grep -q "sentnode"
+	if docker run --rm --interactive --tty --volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode ${CONTAINER_NAME} process keys list | grep -q "sentnode"
 	then
 		# Ask user if they want to delete the existing wallet
 		if whiptail --title "Wallet Exists" --yesno "A wallet already exists. Do you want to delete the existing wallet and continue?" 8 78
@@ -440,7 +444,7 @@ function wallet_initialization()
 			docker run --rm \
 				--interactive \
 				--tty \
-				--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+				--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 				${CONTAINER_NAME} process keys delete
 		else
 			return 0;
@@ -457,14 +461,14 @@ function wallet_initialization()
 		# Restore wallet
 		echo "$MNEMONIC" | docker run --rm \
 			--interactive \
-			--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 			${CONTAINER_NAME} process keys add --recover || { output_error "Failed to restore wallet."; return 1; }
 	else
 		# Create new wallet
 		OUTPUT=$(docker run --rm \
 					--interactive \
 					--tty \
-					--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+					--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 					${CONTAINER_NAME} process keys add)
 		
 		output_log "Wallet creation output: ${OUTPUT}"
@@ -502,7 +506,7 @@ function wallet_public_address()
 	PUBLIC_ADDRESS=$(docker run --rm \
 		--interactive \
 		--tty \
-		--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+		--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 		${CONTAINER_NAME} process keys show | awk 'NR==2{print $3}')
 	
 	return 0;
@@ -514,7 +518,7 @@ function wallet_node_address()
 	NODE_ADDRESS=$(docker run --rm \
 		--interactive \
 		--tty \
-		--volume ${HOME}/.sentinelnode:/root/.sentinelnode \
+		--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 		${CONTAINER_NAME} process keys show | awk 'NR==2{print $2}')
 	
 	return 0;
@@ -575,8 +579,8 @@ function firewall_configure()
 # Function to ask for remote IP
 function ask_remote_ip()
 {
-	# If NODE_IP egale to 0.0.0.0, then retrieve the current public IP
-	if [ "$NODE_IP" == "0.0.0.0" ]
+	# If NODE_IP egale to 0.0.0.0 or empty, then retrieve the current public IP
+	if [ "$NODE_IP" = "0.0.0.0" ] || [ -z "$NODE_IP" ];
 	then
 		# Retrieve the current public IP using wget and sed
 		NODE_IP=$(wget -q -O - checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//')
@@ -702,8 +706,8 @@ function menu_installation()
 	
 	container_install || return 1;
 	
-	if [ ! -d "${HOME}/.sentinelnode" ]; then
-		mkdir ${HOME}/.sentinelnode || { output_error "Failed to create Sentinel node directory."; return 1; }
+	if [ ! -d "${USER_HOME}/.sentinelnode" ]; then
+		mkdir ${USER_HOME}/.sentinelnode || { output_error "Failed to create Sentinel node directory."; return 1; }
 	fi
 	
 	generate_certificate || return 1;
