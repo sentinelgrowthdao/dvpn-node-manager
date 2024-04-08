@@ -7,13 +7,17 @@ NODE_MONIKER=""
 NODE_TYPE="wireguard"
 NODE_IP="0.0.0.0"
 NODE_PORT=16567
+NODE_LOCATION="datacenter"
 WIREGUARD_PORT=16568
 V2RAY_PORT=16568
 CHAIN_ID="sentinelhub-2"
 RPC_ADDRESSES="https://rpc.sentinel.co:443,https://rpc.sentinel.quokkastake.io:443,https://rpc.trinityvalidator.com:443"
-GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,9204ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1180852ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,122740ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,15342624udvpn"
-HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,770ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1871892ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,18897ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,4160000udvpn"
 BACKEND="test"
+DATACENTER_GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,9204ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1180852ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,122740ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,15342624udvpn"
+DATACENTER_HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,770ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1871892ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,18897ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,4160000udvpn"
+RESIDENTIAL_GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,9204ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1180852ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,122740ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,15342624udvpn"
+RESIDENTIAL_HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,770ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1871892ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,18897ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,10000000udvpn"
+
 
 function output_log()
 {
@@ -134,12 +138,6 @@ function refresh_config_files()
 	# Update remote_url parameter
 	sudo sed -i "s/listen_on = .*/listen_on = \"0\\.0\\.0\\.0:${NODE_PORT}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
 	
-	# Update gigabyte_prices parameter
-	sudo sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${GIGABYTE_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
-	
-	# Update hourly_prices parameter
-	sudo sed -i "s/hourly_prices = .*/hourly_prices = \"${HOURLY_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
-	
 	# Update remote_url parameter
 	sudo sed -i "s/remote_url = .*/remote_url = \"https:\/\/${NODE_IP}:${NODE_PORT}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
 	
@@ -152,6 +150,21 @@ function refresh_config_files()
 	# Update V2Ray port
 	sudo sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${HOME}/.sentinelnode/v2ray.toml || { output_error "Failed to set V2Ray port."; return 1; }
 	
+	if [ "$NODE_LOCATION" == "residential" ]
+	then
+		# Update gigabyte_prices parameter
+		sudo sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${RESIDENTIAL_GIGABYTE_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
+		
+		# Update hourly_prices parameter
+		sudo sed -i "s/hourly_prices = .*/hourly_prices = \"${RESIDENTIAL_HOURLY_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
+	else
+		# Update gigabyte_prices parameter
+		sudo sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${DATACENTER_GIGABYTE_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
+		
+		# Update hourly_prices parameter
+		sudo sed -i "s/hourly_prices = .*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/g" ${HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
+	fi
+
 	return 0;
 }
 
@@ -262,13 +275,28 @@ function open_firewall()
 
 function ask_remote_ip()
 {
+	# Retrieve the current public IP using wget and sed
+	ip=$(wget -q -O - checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//')
+
 	# Ask for remote IP
-	NODE_IP=$(whiptail --inputbox "Please enter your node's public IP address:" 8 78 --title "Node IP" 3>&1 1>&2 2>&3) || { output_error "Failed to get node IP."; return 1; }
+	NODE_IP=$(whiptail --inputbox "Please enter your node's public IP address:" 8 78 --title "Node IP" --default "$ip" 3>&1 1>&2 2>&3) || { output_error "Failed to get node IP."; return 1; }
 	
 	# Update configuration
 	refresh_config_files || return 1;
 	
 	return 0;
+}
+
+function ask_node_location()
+{
+    NODE_LOCATION=$(whiptail --title "Node Location" --radiolist "Please select the type of validation node you want to run:" 15 78 2 \
+        "datacenter" "Datacenter" ON \
+        "residential" "Residential" OFF 3>&1 1>&2 2>&3) || { output_error "Failed to get validation node type."; return 1; }
+
+    # Update configuration
+    refresh_config_files || return 1;
+
+    return 0;
 }
 
 function ask_node_type()
@@ -406,7 +434,7 @@ function install_docker()
 	sudo apt install -y curl git openssl || { output_error "Failed to install dependencies."; return 1; }
 	
 	# Download and execute the Docker installation script
-	curl -fsSL get.docker.com -o "${HOME}/get-docker.sh" && sudo sh "${HOME}/get-docker.sh" || { output_error "Failed to install Docker."; return 1; }
+	curl -fsSL get.docker.com | sudo sh || { output_error "Failed to install Docker."; return 1; }
 	
 	# Enable and start the Docker service
 	sudo systemctl enable --now docker || { output_error "Failed to enable Docker."; return 1; }
@@ -473,6 +501,14 @@ function check_installation()
 # Function to display the installation menu
 function menu_installation()
 {
+
+	# Check if whiptail is not installed
+	if ! command -v whiptail &> /dev/null
+	then
+		# Install whiptail
+		sudo apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; return 1; }
+	fi
+
 	if ! whiptail --title "Welcome to Sentinel Installation" --yesno "Welcome to the Sentinel installation process. This installation will be done in multiple steps and you will be guided throughout the process. Do you want to continue with the installation process?" 10 78
 	then
 		echo "Installation process skipped."
@@ -494,6 +530,8 @@ function menu_installation()
 	
 	ask_moniker || return 1;
 	
+	ask_node_location || return 1;
+
 	ask_node_type || return 1;
 	
 	ask_remote_ip || return 1;
