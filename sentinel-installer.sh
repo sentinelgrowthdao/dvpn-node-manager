@@ -528,6 +528,12 @@ function wallet_node_address()
 # Function to open the firewall
 function firewall_configure()
 {
+	# Ask if user wants to configure the firewall
+	if ! whiptail --title "Firewall Configuration" --yesno "Do you want to configure the firewall to allow incoming connections to the node?" 8 78
+	then
+		return 0;
+	fi
+	
 	# Check if UFW is not installed
 	if ! command -v ufw &> /dev/null
 	then
