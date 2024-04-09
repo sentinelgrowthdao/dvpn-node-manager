@@ -530,7 +530,7 @@ function wallet_initialization()
 					--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 					${CONTAINER_NAME} process keys add)
 		
-		output_log "Wallet creation output: ${OUTPUT}"
+		# output_log "Wallet creation output: ${OUTPUT}"
 		
 		# If the ouput contains "Important" then extract the mnemonic
 		if echo "$OUTPUT" | grep -q "Important"
@@ -543,8 +543,6 @@ function wallet_initialization()
 		
 		# Remove end of line
 		MNEMONIC=$(echo "$MNEMONIC" | tr -d '\r')
-		
-		output_log "Wallet mnemonic: ${MNEMONIC}"
 		
 		# Découpage intelligent en groupes de mots
 		formatted_mnemonic=$(echo "$MNEMONIC" | tr -s ' ' '\n' | awk '{
