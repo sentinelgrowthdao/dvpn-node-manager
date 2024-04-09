@@ -189,9 +189,9 @@ function check_installation()
 	fi
 	
 	# If user is not in docker group, return false
-	if ! groups | grep -q "\bdocker\b"
+	if ! groups "$SUDO_USER" | grep -q "\bdocker\b"
 	then
-		output_log "User is not in Docker group."
+		output_log "User $SUDO_USER is not in the Docker group."
 		return 1
 	fi
 	
@@ -255,8 +255,18 @@ function output_error()
 # Function to check if the OS is Ubuntu (Source: https://github.com/roomit-xyz/sentinel-node/blob/main/sentinel-node.sh)
 function os_ubuntu()
 {
+	# Check if the OS is Ubuntu
+	os_name=$(lsb_release -is)
+	if [[ "$os_name" != "Ubuntu" ]]
+	then
+		return 1
+	fi
+
 	version=$(lsb_release -rs)
-	if [[ "$version" == "18."* || "$version" == "19."* || "$version" == "20."* || "$version" == "21."* || "$version" == "22."* || "$version" == "23."* ]]; then
+	if [[ "$version" == "18."* || "$version" == "19."* || "$version" == "20."* || \
+		"$version" == "21."* || "$version" == "22."* || "$version" == "23."* || \
+		"$version" == "24."* ]]
+	then
 		return 0  
 	else
 		return 1  
