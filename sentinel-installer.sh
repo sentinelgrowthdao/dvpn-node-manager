@@ -716,7 +716,7 @@ function ask_moniker()
 function message_wait_funds()
 {
 	# Get public address
-	wallet_public_address || { output_error "Failed to get public address."; return 1; }
+	wallet_addresses || { output_error "Failed to get public address."; return 1; }
 	
 	# If public address doesn't start with "sent" then return error
 	if [[ ! ${PUBLIC_ADDRESS} == "sent"* ]]; then
