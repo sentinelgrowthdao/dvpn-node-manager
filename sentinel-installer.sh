@@ -16,10 +16,11 @@ NODE_LOCATION="datacenter"
 WIREGUARD_PORT=16568
 V2RAY_PORT=16568
 CHAIN_ID="sentinelhub-2"
+WALLET_NAME="operator"
+BACKEND="test"
 
 # Fixed values
 RPC_ADDRESSES="https://rpc.sentinel.co:443,https://rpc.sentinel.quokkastake.io:443,https://rpc.trinityvalidator.com:443"
-BACKEND="test"
 DATACENTER_GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,9204ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1180852ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,122740ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,15342624udvpn"
 DATACENTER_HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,770ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1871892ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,18897ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,4160000udvpn"
 RESIDENTIAL_GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,9204ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1180852ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,122740ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,15342624udvpn"
@@ -46,6 +47,8 @@ function load_config_files()
 	CHAIN_ID=$(grep "^id\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	BACKEND=$(grep "^backend\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	WALLET_NAME=$(grep "^from\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	
 	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	
 	# if hourly_prices equal to DATACENTER_HOURLY_PRICES
@@ -397,6 +400,17 @@ function container_start()
 	# Read config file and check type of node
 	TYPE=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "type" | awk -F" = " '{print $2}' | tr -d '"')
 	
+	# If container is already created, check if it is running
+	if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+	then
+		# Check if the container is not running
+		if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+			# Container is not running, attempt to start it
+			docker start ${CONTAINER_NAME} || { output_error "Failed to start the Sentinel container."; return 1; }
+		fi
+		return 0
+	fi
+
 	# If node type is wireguard
 	if [ "$TYPE" == "wireguard" ]
 	then
@@ -448,6 +462,17 @@ function container_restart()
 {
 	docker restart ${CONTAINER_NAME} || { output_error "Failed to restart the Sentinel container."; return 1; }
 	return 0;
+}
+
+# Function to check if the Docker container is running
+function container_running()
+{
+	if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+	then
+		return 0
+	else
+		return 1
+	fi
 }
 
 ####################################################################################################
@@ -527,27 +552,23 @@ function wallet_initialization()
 	return 0;
 }
 
-# Function to get the public address of the wallet
-function wallet_public_address()
+# Function to get the public and node addresses of the wallet
+function wallet_addresses()
 {
-	PUBLIC_ADDRESS=$(docker run --rm \
-		--interactive \
-		--tty \
-		--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
-		${CONTAINER_NAME} process keys show | awk 'NR==2{print $3}')
-	
-	return 0;
-}
+	# Show waiting message
+	echo "Please wait while the wallet addresses are being retrieved..."
 
-# Function to get the node address
-function wallet_node_address()
-{
-	NODE_ADDRESS=$(docker run --rm \
+	# Execute Docker command once and store output
+	local WALLET_INFO=$(docker run --rm \
 		--interactive \
 		--tty \
-		--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
-		${CONTAINER_NAME} process keys show | awk 'NR==2{print $2}')
-	
+		--volume "${USER_HOME}/.sentinelnode:/root/.sentinelnode" \
+		"${CONTAINER_NAME}" process keys show | awk -v name="$WALLET_NAME" '$1 == name')
+
+	# Extract public and node addresses from the output
+	PUBLIC_ADDRESS=$(echo "$WALLET_INFO" | awk '{print $3}')
+	NODE_ADDRESS=$(echo "$WALLET_INFO" | awk '{print $2}')
+
 	return 0;
 }
 
@@ -722,6 +743,13 @@ function menu_installation()
 		apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; return 1; }
 	fi
 
+	# Check if jq is not installed
+	if ! command -v jq &> /dev/null
+	then
+		# Install jq
+		apt install -y jq || { output_error "Failed to install jq."; return 1; }
+	fi
+
 	if ! whiptail --title "Welcome to Sentinel Installation" --yesno "Welcome to the Sentinel installation process. This installation will be done in multiple steps and you will be guided throughout the process. Do you want to continue with the installation process?" 10 78
 	then
 		echo "Installation process skipped."
@@ -776,8 +804,8 @@ function menu_configuration()
 
 	choice=$(whiptail --title "Welcome to Sentinel Configuration" --menu "Welcome to the Sentinel configuration process. Please select an option:" 15 78 5 \
 		"Settings" "Change node configuration" \
-		"Wallet" "Manage node wallet" \
-		"Maintenance" "Perform maintenance actions" \
+		"Wallet" "View wallet information" \
+		"Node" "Perform node actions" \
 		"Update" "Update the node" \
 		--ok-button "Select" --cancel-button "Finish" 3>&1 1>&2 2>&3)
 
@@ -793,8 +821,8 @@ function menu_configuration()
 		"Wallet")
 			menu_wallet
 			;;
-		"Maintenance")
-			menu_maintenance
+		"Node")
+			menu_node
 			;;
 		"Update")
 			menu_update
@@ -851,13 +879,70 @@ function menu_settings()
 # Function to display the wallet menu
 function menu_wallet()
 {
-	echo "menu_wallet"
+	# Load configuration into variables
+	wallet_addresses || return 1;
+
+	# Get wallet balance
+	AMOUNT_BALANCE=$(curl -s https://wapi.foxinodes.net/api/v1/address/${PUBLIC_ADDRESS} | jq -r '.addresses[0].available')
+	while true
+	do
+		# Display wallet information and prompt for next action
+		if whiptail --title "Wallet Information" --yes-button "Back" --no-button "Remove Wallet" --yesno "Public Address: ${PUBLIC_ADDRESS}\nNode Address: ${NODE_ADDRESS}\nDVPN Balance: ${AMOUNT_BALANCE}" 12 78
+		then
+			return 0;
+		else
+			# Confirm wallet removal
+			if whiptail --title "Confirm Removal" --yesno "Are you sure you want to remove the wallet address?" 8 78
+			then
+				# Remove wallet
+				# wallet_remove || return 1;
+
+				# Initialize new wallet
+				wallet_initialization || return 1;
+			fi
+		fi
+	done
 }
 
-# Function to display the maintenance menu
-function menu_maintenance()
+# Function to display the node menu
+function menu_node()
 {
-	echo "menu_maintenance"
+	local choice=""
+	local status_msg=""
+
+	while true
+	do
+		# Check if the container is running
+		if container_running
+		then
+			status_msg="Node Status: Running"
+			choice=$(whiptail --title "Sentinel Node Menu" --menu "$status_msg\nChoose an option:" 15 78 4 \
+				"Restart" "Restart Sentinel Node" \
+				"Stop" "Stop Sentinel Node" \
+				"Back" "Return to previous menu" 3>&1 1>&2 2>&3)
+		else
+			status_msg="Node Status: Stopped"
+			choice=$(whiptail --title "Sentinel Node Menu" --menu "$status_msg\nChoose an option:" 15 78 3 \
+				"Start" "Start Sentinel Node" \
+				"Back" "Return to previous menu" 3>&1 1>&2 2>&3)
+		fi
+
+		# Handle selected option
+		case $choice in
+			"Restart")
+				container_restart
+				;;
+			"Stop")
+				container_stop
+				;;
+			"Start")
+				container_start
+				;;
+			*)
+				break
+				;;
+		esac
+	done
 }
 
 # Function to update the Sentinel image
