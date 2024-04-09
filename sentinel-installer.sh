@@ -692,12 +692,19 @@ function ask_node_type()
 	return 0;
 }
 
+# Function to ask for max peers
+function ask_max_peers()
+{
+	# Ask for max peers
+	MAX_PEERS=$(whiptail --inputbox "Please enter the maximum number of peers you want to connect to:" 8 78 "$MAX_PEERS" --title "Max Peers" 3>&1 1>&2 2>&3) || { output_error "Failed to get max peers."; return 1; }
+	return 0;
+}
+
 # Function to ask for moniker
 function ask_moniker()
 {
 	# Ask for moniker
 	NODE_MONIKER=$(whiptail --inputbox "Please enter your node's moniker:" 8 78 "$NODE_MONIKER" --title "Node Moniker" 3>&1 1>&2 2>&3) || { output_error "Failed to get moniker."; return 1; }
-	
 	return 0;
 }
 
@@ -876,6 +883,7 @@ function menu_settings()
 				;;
 			3)
 				ask_node_type || return 1;
+				ask_max_peers || return 1;
 
 				refresh_config_files || return 1;
 				container_restart || return 1;
