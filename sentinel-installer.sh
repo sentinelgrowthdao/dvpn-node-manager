@@ -241,9 +241,15 @@ function output_log()
 {
 	if [ "$OUTPUT_DEBUG" = true ]; then
 		local message="$1"
-		echo -e "\e[32m${message}\e[0m"
+		echo -e "\e[34m${message}\e[0m"
 	fi
+}
 
+# Function to output information messages
+function output_info()
+{
+	local message="$1"
+	echo -e "\e[32m${message}\e[0m"
 }
 
 # Function to output error messages
@@ -388,6 +394,7 @@ function container_install()
 	fi
 	
 	# Pull the Sentinel image
+	output_info "Pulling the Sentinel image, please wait..."
 	docker pull ${IMAGE} || { output_error "Failed to pull the Sentinel image."; return 1; }
 	docker tag ${IMAGE} ${CONTAINER_NAME} || { output_error "Failed to tag the Sentinel image."; return 1; }
 	
@@ -509,12 +516,14 @@ function wallet_initialization()
 		MNEMONIC=$(whiptail --inputbox "Please enter your wallet's mnemonic:" 8 78 --title "Wallet Mnemonic" 3>&1 1>&2 2>&3) || { output_error "Failed to get mnemonic."; return 1; }
 		
 		# Restore wallet
+		output_info "Restoring wallet, please wait..."
 		echo "$MNEMONIC" | docker run --rm \
 			--interactive \
 			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 			${CONTAINER_NAME} process keys add --recover || { output_error "Failed to restore wallet."; return 1; }
 	else
 		# Create new wallet
+		output_info "Creating new wallet, please wait..."
 		OUTPUT=$(docker run --rm \
 					--interactive \
 					--tty \
@@ -556,7 +565,7 @@ function wallet_initialization()
 function wallet_addresses()
 {
 	# Show waiting message
-	echo "Please wait while the wallet addresses are being retrieved..."
+	output_info "Please wait while the wallet addresses are being retrieved..."
 
 	# Execute Docker command once and store output
 	local WALLET_INFO=$(docker run --rm \
@@ -590,6 +599,7 @@ function firewall_configure()
 	if ! command -v ufw &> /dev/null
 	then
 		# Install UFW
+		output_info "Installing UFW, please wait..."
 		apt install -y ufw || { output_error "Failed to install UFW."; return 1; }
 	fi
 	
