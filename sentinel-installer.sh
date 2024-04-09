@@ -562,6 +562,44 @@ function wallet_initialization()
 	return 0;
 }
 
+# Function to check if wallet exists
+function wallet_exist()
+{
+	# Check if a wallet with the specified name exists
+	local wallet_list_output
+	wallet_list_output=$(docker run --rm \
+		--interactive \
+		--tty \
+		--volume "${USER_HOME}/.sentinelnode:/root/.sentinelnode" \
+		"${CONTAINER_NAME}" process keys list)
+
+	# Use grep to check if the wallet name is in the list
+	if echo "$wallet_list_output" | grep -q "$WALLET_NAME"; then
+		return 0  # Wallet exists
+	else
+		return 1  # Wallet does not exist
+	fi
+}
+
+# Function to remove the wallet
+function wallet_remove()
+{
+	# If wallet does not exist, return 0
+	if ! wallet_exist
+	then
+		return 0;
+	fi
+	
+	# Delete existing wallet
+	docker run --rm \
+		--interactive \
+		--tty \
+		--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
+		${CONTAINER_NAME} process keys delete $WALLET_NAME || { output_error "Failed to delete wallet."; return 1; }
+	
+	return 0;
+}
+
 # Function to get the public and node addresses of the wallet
 function wallet_addresses()
 {
