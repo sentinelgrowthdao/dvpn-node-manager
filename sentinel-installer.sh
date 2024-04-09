@@ -541,6 +541,9 @@ function wallet_initialization()
 			return 1
 		fi
 		
+		# Remove end of line
+		MNEMONIC=$(echo "$MNEMONIC" | tr -d '\r')
+		
 		output_log "Wallet mnemonic: ${MNEMONIC}"
 		
 		# Découpage intelligent en groupes de mots
