@@ -580,7 +580,11 @@ function wallet_addresses()
 	# Extract public and node addresses from the output
 	PUBLIC_ADDRESS=$(echo "$WALLET_INFO" | awk '{print $3}')
 	NODE_ADDRESS=$(echo "$WALLET_INFO" | awk '{print $2}')
-
+	
+	# Remove end of line
+	PUBLIC_ADDRESS=$(echo "$PUBLIC_ADDRESS" | tr -d '\r')
+	NODE_ADDRESS=$(echo "$NODE_ADDRESS" | tr -d '\r')
+	
 	return 0;
 }
 
