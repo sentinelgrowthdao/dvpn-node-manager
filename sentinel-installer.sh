@@ -495,11 +495,7 @@ function wallet_initialization()
 		if whiptail --title "Wallet Exists" --yesno "A wallet already exists. Do you want to delete the existing wallet and continue?" 8 78
 		then
 			# Delete existing wallet
-			docker run --rm \
-				--interactive \
-				--tty \
-				--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
-				${CONTAINER_NAME} process keys delete
+			wallet_remove
 		else
 			output_log "Wallet already exists."
 			return 0;
@@ -953,11 +949,10 @@ function menu_wallet()
 			return 0;
 		else
 			# Confirm wallet removal
-			if whiptail --title "Confirm Removal" --yesno "Are you sure you want to remove the wallet address?" 8 78
+			if whiptail --title "Confirm Removal" --defaultno --yesno "Are you sure you want to remove the wallet address?" 8 78
 			then
-				# Remove wallet
-				# wallet_remove || return 1;
-
+				# Delete existing wallet
+				wallet_remove || return 1;
 				# Initialize new wallet
 				wallet_initialization || return 1;
 			fi
