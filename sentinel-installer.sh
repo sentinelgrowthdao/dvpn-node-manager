@@ -46,7 +46,7 @@ function load_config_files()
 	V2RAY_PORT=$(grep "^listen_port\s*=" "${USER_HOME}/.sentinelnode/v2ray.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	CHAIN_ID=$(grep "^id\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	BACKEND=$(grep "^backend\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	# BACKEND=$(grep "^backend\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	WALLET_NAME=$(grep "^from\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	
 	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
