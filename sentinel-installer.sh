@@ -17,6 +17,7 @@ WIREGUARD_PORT=16568
 V2RAY_PORT=16568
 CHAIN_ID="sentinelhub-2"
 WALLET_NAME="operator"
+MAX_PEERS=250
 
 # Fixed values
 BACKEND="test"
@@ -45,6 +46,7 @@ function load_config_files()
 	WIREGUARD_PORT=$(grep "^listen_port\s*=" "${USER_HOME}/.sentinelnode/wireguard.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	V2RAY_PORT=$(grep "^listen_port\s*=" "${USER_HOME}/.sentinelnode/v2ray.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	CHAIN_ID=$(grep "^id\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	MAX_PEERS=$(grep "^max_peers\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	# RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	# BACKEND=$(grep "^backend\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	WALLET_NAME=$(grep "^from\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
@@ -85,6 +87,9 @@ function refresh_config_files()
 	
 	# Update backend parameter
 	sed -i "s/backend = .*/backend = \"${BACKEND}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set backend."; return 1; }
+	
+	# Update max_peers parameter
+	sed -i "s/max_peers = .*/max_peers = ${MAX_PEERS}/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set max peers."; return 1; }
 	
 	# Update WireGuard port
 	sed -i "s/listen_port = .*/listen_port = ${WIREGUARD_PORT}/g" ${USER_HOME}/.sentinelnode/wireguard.toml || { output_error "Failed to set WireGuard port."; return 1; }
