@@ -34,6 +34,12 @@ RESIDENTIAL_HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF1
 # Dynamic values
 PUBLIC_ADDRESS=""
 NODE_ADDRESS=""
+WALLET_BALANCE=""
+WALLET_BALANCE_AMOUNT=0
+WALLET_BALANCE_DENOM="DVPN"
+
+# API URLs
+FOXINODES_API_BALANCE="https://wapi.foxinodes.net/api/v1/address/"
 
 ####################################################################################################
 # Configuration functions
@@ -640,6 +646,34 @@ function wallet_addresses()
 	return 0;
 }
 
+# Function to get wallet balance
+function wallet_balance()
+{
+	# Show waiting message
+	output_info "Please wait while the wallet balance is being retrieved..."
+	
+	# Get wallet balance from remote API
+	local VALUE=$(curl -s ${FOXINODES_API_BALANCE}${PUBLIC_ADDRESS} | jq -r '.addresses[0].available')
+	
+	# Reset values
+	WALLET_BALANCE=""
+	WALLET_BALANCE_AMOUNT=0
+	WALLET_BALANCE_DENOM="DVPN"
+	
+	# If the value is empty, return 1
+	if [ -z "$VALUE" ]
+	then
+		return 1;
+	fi
+	
+	# Set the value and extract the amount and denom
+	WALLET_BALANCE=$VALUE
+	WALLET_BALANCE_AMOUNT=$(echo "$WALLET_BALANCE" | awk '{print $1}')
+	WALLET_BALANCE_DENOM=$(echo "$WALLET_BALANCE" | awk '{print $2}')
+	
+	return 0;
+}
+
 
 ####################################################################################################
 # Firewall functions
@@ -1026,10 +1060,12 @@ function menu_wallet()
 
 	# Get wallet balance
 	AMOUNT_BALANCE=$(curl -s https://wapi.foxinodes.net/api/v1/address/${PUBLIC_ADDRESS} | jq -r '.addresses[0].available')
+	wallet_balance || { output_error "Failed to retrieve wallet balance."; return 1; }
+	
 	while true
 	do
 		# Display wallet information and prompt for next action
-		if whiptail --title "Wallet Information" --yes-button "Back" --no-button "Remove Wallet" --yesno "Public Address: ${PUBLIC_ADDRESS}\nNode Address: ${NODE_ADDRESS}\nDVPN Balance: ${AMOUNT_BALANCE}" 12 78
+		if whiptail --title "Wallet Information" --yes-button "Back" --no-button "Remove Wallet" --yesno "Public Address: ${PUBLIC_ADDRESS}\nNode Address: ${NODE_ADDRESS}\nDVPN Balance: ${WALLET_BALANCE}" 12 78
 		then
 			return 0;
 		else
