@@ -18,6 +18,7 @@ V2RAY_PORT=16568
 CHAIN_ID="sentinelhub-2"
 WALLET_NAME="operator"
 BACKEND="test"
+HANDSHAKE_ENABLE="true"
 
 # Fixed values
 RPC_ADDRESSES="https://rpc.sentinel.co:443,https://rpc.sentinel.quokkastake.io:443,https://rpc.trinityvalidator.com:443"
@@ -37,20 +38,25 @@ NODE_ADDRESS=""
 # Function to load configuration files into variables
 function load_config_files()
 {
+	locale CONFIG_FILE="${USER_HOME}/.sentinelnode/config.toml"
+	locale WIREGUARD_CONFIG="${USER_HOME}/.sentinelnode/wireguard.toml"
+	locale V2RAY_CONFIG="${USER_HOME}/.sentinelnode/v2ray.toml"
+
 	# Load config files into variables
-	NODE_MONIKER=$(grep "^moniker\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	NODE_TYPE=$(grep "^type\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	NODE_IP=$(grep "^remote_url\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
-	NODE_PORT=$(grep "^listen_on\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F":" '{print $2}')
-	WIREGUARD_PORT=$(grep "^listen_port\s*=" "${USER_HOME}/.sentinelnode/wireguard.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	V2RAY_PORT=$(grep "^listen_port\s*=" "${USER_HOME}/.sentinelnode/v2ray.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	CHAIN_ID=$(grep "^id\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	BACKEND=$(grep "^backend\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	WALLET_NAME=$(grep "^from\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	
+	NODE_MONIKER=$(grep "^moniker\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	NODE_TYPE=$(grep "^type\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	NODE_IP=$(grep "^remote_url\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
+	NODE_PORT=$(grep "^listen_on\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F":" '{print $2}')
+	WIREGUARD_PORT=$(grep "^listen_port\s*=" "${WIREGUARD_CONFIG}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	V2RAY_PORT=$(grep "^listen_port\s*=" "${V2RAY_CONFIG}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	CHAIN_ID=$(grep "^id\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	BACKEND=$(grep "^backend\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	WALLET_NAME=$(grep "^from\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	HANDSHAKE_ENABLE=$(awk 'BEGIN{FS=OFS="="; in_section=0} /^\[handshake\]$/{in_section=1; next} /^\[.*\]$/{if(in_section) in_section=0} in_section && /^enable\s*=\s*(true|false)/{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2; exit}' $CONFIG_FILE)
+
+	# Find out if the node is residential or datacenter
 	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	
 	# if hourly_prices equal to DATACENTER_HOURLY_PRICES
 	if [ "$HOURLY_PRICES" == "$DATACENTER_HOURLY_PRICES" ]
 	then
@@ -86,6 +92,9 @@ function refresh_config_files()
 	# Update backend parameter
 	sed -i "s/backend = .*/backend = \"${BACKEND}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set backend."; return 1; }
 	
+	# Update handshake enable parameter
+	sed -i '/^\[handshake\]$/,/^\[/!b; /^\[handshake\]$/,/^\[/ {/^[[:space:]]*enable[[:space:]]*=/s/=.*/= '"${HANDSHAKE_ENABLE}"'/; /^[[:space:]]*\[/b}' "${CONFIG_FILE}"
+
 	# Update WireGuard port
 	sed -i "s/listen_port = .*/listen_port = ${WIREGUARD_PORT}/g" ${USER_HOME}/.sentinelnode/wireguard.toml || { output_error "Failed to set WireGuard port."; return 1; }
 	
@@ -678,6 +687,13 @@ function ask_node_type()
 	NODE_TYPE=$(whiptail --title "Node Type" --radiolist "Please select the type of node you want to run:" 15 78 2 \
 		"wireguard" "WireGuard" $wireguard_state \
 		"v2ray" "V2Ray" $v2ray_state 3>&1 1>&2 2>&3) || { output_error "Failed to get node type."; return 1; }
+
+	# If node type is V2Ray
+	if [ "$NODE_TYPE" == "v2ray" ];
+	then
+		# Force handshake to be disabled for V2Ray
+		HANDSHAKE_ENABLE="false"
+	fi
 
 	return 0;
 }
