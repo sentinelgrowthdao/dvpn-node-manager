@@ -271,7 +271,7 @@ function output_error()
 	local error="$1"
 	echo -e "\e[31m${error}\e[0m"
 	whiptail --title "Error" --msgbox "${error}" 8 78
-	exit 1
+	# exit 1
 }
 
 # Function to check if the OS is Ubuntu (Source: https://github.com/roomit-xyz/sentinel-node/blob/main/sentinel-node.sh)
@@ -697,7 +697,10 @@ function ask_remote_ip()
 	fi
 	
 	# Ask for remote IP
-	NODE_IP=$(whiptail --inputbox "Please enter your node's public IP address:" 8 78 "$NODE_IP" --title "Node IP" 3>&1 1>&2 2>&3) || { output_error "Failed to get node IP."; return 1; }
+	local VALUE=$(whiptail --inputbox "Please enter your node's public IP address:" 8 78 "$NODE_IP" --title "Node IP" 3>&1 1>&2 2>&3) || return 1;
+
+	# Set value received from whiptail to NODE_IP
+	NODE_IP=$VALUE
 	
 	return 0;
 }
@@ -716,10 +719,22 @@ function ask_node_location()
 	fi
 
 	# Ask for node location using whiptail
-	NODE_LOCATION=$(whiptail --title "Node Location" --radiolist "Please select the type of validation node you want to run:" 15 78 2 \
+	local VALUE=$(whiptail --title "Node Location" --radiolist "Please select the type of validation node you want to run:" 15 78 2 \
 		"datacenter" "Datacenter" $datacenter_state \
-		"residential" "Residential" $residential_state 3>&1 1>&2 2>&3) || { output_error "Failed to get validation node type."; return 1; }
+		"residential" "Residential" $residential_state 3>&1 1>&2 2>&3) || return 1;
 
+	# Check if the user pressed Cancel
+	if [ $? -ne 0 ]; then
+		return 1
+	fi
+
+	# Check if the user entered a value
+	if [ -z "$VALUE" ]; then
+		return 2
+	fi
+
+	# Set value received from whiptail to NODE_LOCATION
+	NODE_LOCATION=$VALUE
 	return 0;
 }
 
@@ -737,9 +752,22 @@ function ask_node_type()
 	fi
 
 	# Ask for node type using whiptail
-	NODE_TYPE=$(whiptail --title "Node Type" --radiolist "Please select the type of node you want to run:" 15 78 2 \
+	local VALUE=$(whiptail --title "Node Type" --radiolist "Please select the type of node you want to run:" 15 78 2 \
 		"wireguard" "WireGuard" $wireguard_state \
-		"v2ray" "V2Ray" $v2ray_state 3>&1 1>&2 2>&3) || { output_error "Failed to get node type."; return 1; }
+		"v2ray" "V2Ray" $v2ray_state 3>&1 1>&2 2>&3)
+
+	# Check if the user pressed Cancel
+	if [ $? -ne 0 ]; then
+		return 1
+	fi
+
+	# Check if the user entered a value
+	if [ -z "$VALUE" ]; then
+		return 2
+	fi
+
+	# Set value received from whiptail to NODE_TYPE
+	NODE_TYPE=$VALUE
 
 	# If node type is V2Ray
 	if [ "$NODE_TYPE" == "v2ray" ];
@@ -758,7 +786,20 @@ function ask_node_type()
 function ask_max_peers()
 {
 	# Ask for max peers
-	MAX_PEERS=$(whiptail --inputbox "Please enter the maximum number of peers you want to connect to:" 8 78 "$MAX_PEERS" --title "Max Peers" 3>&1 1>&2 2>&3) || { output_error "Failed to get max peers."; return 1; }
+	local VALUE=$(whiptail --inputbox "Please enter the maximum number of peers you want to connect to:" 8 78 "$MAX_PEERS" --title "Max Peers" 3>&1 1>&2 2>&3)
+	
+	# Check if the user pressed Cancel
+	if [ $? -ne 0 ]; then
+		return 1
+	fi
+
+	# Check if the user entered a value
+	if [ -z "$VALUE" ]; then
+		return 2
+	fi
+
+	# Set value received from whiptail to MAX_PEERS
+	MAX_PEERS=$VALUE
 	return 0;
 }
 
@@ -766,7 +807,20 @@ function ask_max_peers()
 function ask_moniker()
 {
 	# Ask for moniker
-	NODE_MONIKER=$(whiptail --inputbox "Please enter your node's moniker:" 8 78 "$NODE_MONIKER" --title "Node Moniker" 3>&1 1>&2 2>&3) || { output_error "Failed to get moniker."; return 1; }
+	local VALUE=$(whiptail --inputbox "Please enter your node's moniker:" 8 78 "$NODE_MONIKER" --title "Node Moniker" 3>&1 1>&2 2>&3)
+
+	# Check if the user pressed Cancel
+	if [ $? -ne 0 ]; then
+		return 1
+	fi
+
+	# Check if the user entered a value
+	if [ -z "$VALUE" ]; then
+		return 2
+	fi
+
+	# Set value received from whiptail to NODE_MONIKER
+	NODE_MONIKER=$VALUE
 	return 0;
 }
 
@@ -819,14 +873,14 @@ function menu_installation()
 	if ! command -v whiptail &> /dev/null
 	then
 		# Install whiptail
-		apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; return 1; }
+		apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; exit 1; }
 	fi
 
 	# Check if jq is not installed
 	if ! command -v jq &> /dev/null
 	then
 		# Install jq
-		apt install -y jq || { output_error "Failed to install jq."; return 1; }
+		apt install -y jq || { output_error "Failed to install jq."; exit 1; }
 	fi
 
 	if ! whiptail --title "Welcome to Sentinel Installation" --yesno "Welcome to the Sentinel installation process. This installation will be done in multiple steps and you will be guided throughout the process. Do you want to continue with the installation process?" 10 78
@@ -836,38 +890,38 @@ function menu_installation()
 		exit 0
 	fi
 	
-	install_docker || return 1;
+	install_docker || exit 1;
 	
-	container_install || return 1;
+	container_install || exit 1;
 	
 	if [ ! -d "${USER_HOME}/.sentinelnode" ]; then
-		mkdir ${USER_HOME}/.sentinelnode || { output_error "Failed to create Sentinel node directory."; return 1; }
+		mkdir ${USER_HOME}/.sentinelnode || { output_error "Failed to create Sentinel node directory."; exit 1; }
 	fi
 	
-	generate_certificate || return 1;
+	generate_certificate || exit 1;
 	
-	generate_sentinel_config || return 1;
+	generate_sentinel_config || exit 1;
 
-	load_config_files || return 1;
+	load_config_files || exit 1;
 	
-	ask_moniker || return 1;
+	ask_moniker || { output_error "Failed to get moniker."; exit 1; }
 	
-	ask_node_location || return 1;
+	ask_node_location || { output_error "Failed to get validation node type."; exit 1; }
 
-	ask_node_type || return 1;
+	ask_node_type || { output_error "Failed to get node type."; exit 1; }
 	
-	ask_remote_ip || return 1;
+	ask_remote_ip || { output_error "Failed to get node IP."; exit 1; }
 	
-	refresh_config_files || return 1;
+	refresh_config_files || exit 1;
 	
-	firewall_configure || return 1;
+	firewall_configure || exit 1;
 	
-	wallet_initialization || return 1;
+	wallet_initialization || exit 1;
 	
-	message_wait_funds || return 1;
+	message_wait_funds || exit 1;
 	
 	# Start the Sentinel node
-	container_start || return 1;
+	container_start || exit 1;
 	
 	# Display message to user
 	whiptail --title "Installation Complete" --msgbox "The Sentinel node has been successfully installed and started!\nYou can now access the node dashboard by visiting the following URL:\n\nhttps://${NODE_IP}:${NODE_PORT}/status" 12 100
@@ -927,30 +981,31 @@ function menu_settings()
 
 		case $CHOICE in
 			1)
-				ask_moniker || return 1;
-				ask_node_location || return 1;
-
-				refresh_config_files || return 1;
-				container_restart || return 1;
-				# Display message indicating that the settings have been updated
-				whiptail --title "Settings Updated" --msgbox "Node settings have been updated." 8 78
+				if ask_moniker && ask_node_location;
+				then
+					refresh_config_files || return 1;
+					container_restart || return 1;
+					# Display message indicating that the settings have been updated
+					whiptail --title "Settings Updated" --msgbox "Node settings have been updated." 8 78
+				fi
 				;;
 			2)
-				ask_remote_ip || return 1;
-
-				refresh_config_files || return 1;
-				container_restart || return 1;
-				# Display message indicating that the settings have been updated
-				whiptail --title "Settings Updated" --msgbox "Network settings have been updated." 8 78
+				if ask_remote_ip;
+				then
+					refresh_config_files || return 1;
+					container_restart || return 1;
+					# Display message indicating that the settings have been updated
+					whiptail --title "Settings Updated" --msgbox "Network settings have been updated." 8 78
+				fi
 				;;
 			3)
-				ask_node_type || return 1;
-				ask_max_peers || return 1;
-
-				refresh_config_files || return 1;
-				container_restart || return 1;
-				# Display message indicating that the settings have been updated
-				whiptail --title "Settings Updated" --msgbox "VPN settings have been updated." 8 78
+				if ask_node_type && ask_max_peers
+				then
+					refresh_config_files || return 1;
+					container_restart || return 1;
+					# Display message indicating that the settings have been updated
+					whiptail --title "Settings Updated" --msgbox "VPN settings have been updated." 8 78
+				fi
 				;;
 		esac
 	done
