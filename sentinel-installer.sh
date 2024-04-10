@@ -667,9 +667,9 @@ function wallet_balance()
 	fi
 	
 	# Set the value and extract the amount and denom
-	WALLET_BALANCE=$VALUE
-	WALLET_BALANCE_AMOUNT=$(echo "$WALLET_BALANCE" | awk '{print $1}')
-	WALLET_BALANCE_DENOM=$(echo "$WALLET_BALANCE" | awk '{print $2}')
+	WALLET_BALANCE=$(echo "$VALUE" | tr -d '\n')
+	WALLET_BALANCE_AMOUNT=$(echo "$WALLET_BALANCE" | sed -E 's/([^0-9]*)([0-9]+)(.*)/\2/')
+	WALLET_BALANCE_DENOM=$(echo "$WALLET_BALANCE" | sed -E 's/[^a-zA-Z]+//g')
 	
 	return 0;
 }
