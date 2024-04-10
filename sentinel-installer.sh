@@ -411,7 +411,7 @@ function install_docker()
 	fi
 	
 	# Install dependencies
-	apt install -y curl git openssl || { output_error "Failed to install dependencies."; return 1; }
+	apt install -y git openssl || { output_error "Failed to install dependencies."; return 1; }
 	
 	# Download and execute the Docker installation script
 	set -o pipefail
@@ -1313,6 +1313,13 @@ if ! command -v jq &> /dev/null
 then
 	# Install jq
 	apt install -y jq || { output_error "Failed to install jq."; return 1; }
+fi
+
+# Check if curl is not installed
+if ! command -v curl &> /dev/null
+then
+	# Install curl
+	apt install -y curl || { output_error "Failed to install curl."; return 1; }
 fi
 
 # Load configuration from API (don't stop the script if it fails)
