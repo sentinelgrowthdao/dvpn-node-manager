@@ -1049,21 +1049,6 @@ function message_docker_reboot_required()
 # Function to display the installation menu
 function menu_installation()
 {
-
-	# Check if whiptail is not installed
-	if ! command -v whiptail &> /dev/null
-	then
-		# Install whiptail
-		apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; return 1; }
-	fi
-
-	# Check if jq is not installed
-	if ! command -v jq &> /dev/null
-	then
-		# Install jq
-		apt install -y jq || { output_error "Failed to install jq."; return 1; }
-	fi
-
 	if ! whiptail --title "Welcome to Sentinel Installation" --yesno "Welcome to the Sentinel installation process. This installation will be done in multiple steps and you will be guided throughout the process. Do you want to continue with the installation process?" 10 78
 	then
 		echo "Installation process skipped."
@@ -1314,6 +1299,20 @@ function menu_update()
 if [ "$(id -u)" != "0" ]; then
 	echo "This script must be run with sudo permissions"
 	exit 1
+fi
+
+# Check if whiptail is not installed
+if ! command -v whiptail &> /dev/null
+then
+	# Install whiptail
+	apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; return 1; }
+fi
+
+# Check if jq is not installed
+if ! command -v jq &> /dev/null
+then
+	# Install jq
+	apt install -y jq || { output_error "Failed to install jq."; return 1; }
 fi
 
 # Load configuration from API (don't stop the script if it fails)
