@@ -239,6 +239,13 @@ function check_installation()
 		return 1
 	fi
 	
+	# If wallet does not exist, return false
+	if ! wallet_exist
+	then
+		output_log "Wallet does not exist."
+		return 1
+	fi
+	
 	# If container is not initialized, return false
 	if ! docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
 	then
