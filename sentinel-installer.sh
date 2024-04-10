@@ -873,11 +873,11 @@ function ask_moniker()
 function message_wait_funds()
 {
 	# Get public address
-	wallet_addresses || { output_error "Failed to get public address."; return 1; }
+	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
 	
 	# If public address doesn't start with "sent" then return error
 	if [[ ! ${PUBLIC_ADDRESS} == "sent"* ]]; then
-		output_error "Invalid public address."
+		output_error "Invalid public address found, please check your wallet configuration."
 		return 1
 	fi
 	
@@ -1056,11 +1056,9 @@ function menu_settings()
 function menu_wallet()
 {
 	# Load configuration into variables
-	wallet_addresses || return 1;
-
+	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
 	# Get wallet balance
-	AMOUNT_BALANCE=$(curl -s https://wapi.foxinodes.net/api/v1/address/${PUBLIC_ADDRESS} | jq -r '.addresses[0].available')
-	wallet_balance || { output_error "Failed to retrieve wallet balance."; return 1; }
+	wallet_balance || { output_error "Failed to retrieve wallet balance, API may be down."; return 1; }
 	
 	while true
 	do
