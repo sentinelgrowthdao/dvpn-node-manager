@@ -914,14 +914,14 @@ function menu_installation()
 	if ! command -v whiptail &> /dev/null
 	then
 		# Install whiptail
-		apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; exit 1; }
+		apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; return 1; }
 	fi
 
 	# Check if jq is not installed
 	if ! command -v jq &> /dev/null
 	then
 		# Install jq
-		apt install -y jq || { output_error "Failed to install jq."; exit 1; }
+		apt install -y jq || { output_error "Failed to install jq."; return 1; }
 	fi
 
 	if ! whiptail --title "Welcome to Sentinel Installation" --yesno "Welcome to the Sentinel installation process. This installation will be done in multiple steps and you will be guided throughout the process. Do you want to continue with the installation process?" 10 78
@@ -931,41 +931,56 @@ function menu_installation()
 		exit 0
 	fi
 	
-	install_docker || exit 1;
+	install_docker || return 1;
 	
-	container_install || exit 1;
+	container_install || return 1;
 	
 	if [ ! -d "${USER_HOME}/.sentinelnode" ]; then
-		mkdir ${USER_HOME}/.sentinelnode || { output_error "Failed to create Sentinel node directory."; exit 1; }
+		mkdir ${USER_HOME}/.sentinelnode || { output_error "Failed to create Sentinel node directory."; return 1; }
 	fi
 	
-	generate_certificate || exit 1;
+	generate_certificate || return 1;
 	
-	generate_sentinel_config || exit 1;
+	generate_sentinel_config || return 1;
 
-	load_config_files || exit 1;
+	load_config_files || return 1;
 	
-	ask_moniker || { output_error "Failed to get moniker."; exit 1; }
+	ask_moniker || { output_error "Failed to get moniker."; return 1; }
 	
-	ask_node_location || { output_error "Failed to get validation node type."; exit 1; }
+	ask_node_location || { output_error "Failed to get validation node type."; return 1; }
 
-	ask_node_type || { output_error "Failed to get node type."; exit 1; }
+	ask_node_type || { output_error "Failed to get node type."; return 1; }
 	
-	ask_remote_ip || { output_error "Failed to get node IP."; exit 1; }
+	ask_remote_ip || { output_error "Failed to get node IP."; return 1; }
 	
-	refresh_config_files || exit 1;
+	refresh_config_files || return 1;
 	
-	firewall_configure || exit 1;
+	firewall_configure || return 1;
 	
-	wallet_initialization || exit 1;
+	wallet_initialization || return 1;
 	
-	message_wait_funds || exit 1;
+	message_wait_funds || return 1;
 	
-	# Start the Sentinel node
-	container_start || exit 1;
+	wallet_balance || { output_error "Failed to get wallet balance."; }
 	
-	# Display message to user
-	whiptail --title "Installation Complete" --msgbox "The Sentinel node has been successfully installed and started!\nYou can now access the node dashboard by visiting the following URL:\n\nhttps://${NODE_IP}:${NODE_PORT}/status" 12 100
+	# If the wallet balance is less than 1 DVPN, display an error message
+	if [ "$WALLET_BALANCE_AMOUNT" -lt 1 ]; then
+		output_error "Insufficient funds. Unable to start the node because the wallet balance is empty (less than 1 DVPN)."
+		return 1
+	else
+		# Start the Sentinel node
+		container_start || return 1;
+	fi
+	
+	# If the container is not running, display an error message
+	if ! container_running
+	then
+		output_error "Failed to start the Sentinel node."
+		return 1
+	else
+		# Display message indicating that the node has been successfully installed and started
+		whiptail --title "Installation Complete" --msgbox "The Sentinel node has been successfully installed and started!\nYou can now access the node dashboard by visiting the following URL:\n\nhttps://${NODE_IP}:${NODE_PORT}/status" 12 100
+	fi
 	
 	return 0;
 }
@@ -1151,7 +1166,6 @@ do
 	then
 		menu_configuration;
 	else
-		menu_installation;
-		exit 0;
+		menu_installation || exit 1;
 	fi
 done
