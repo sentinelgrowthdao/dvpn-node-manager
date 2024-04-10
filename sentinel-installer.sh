@@ -19,14 +19,17 @@ NODE_PORT=16567
 NODE_LOCATION="datacenter"
 WIREGUARD_PORT=16568
 V2RAY_PORT=16568
-CHAIN_ID="sentinelhub-2"
 WALLET_NAME="operator"
 MAX_PEERS=250
 HANDSHAKE_ENABLE="true"
 
-# Fixed values
+# Fixed values loaded from api "dvpn-node/configuration" (except for BACKEND)
 BACKEND="test"
+CHAIN_ID="sentinelhub-2"
 RPC_ADDRESSES="https://rpc.sentinel.co:443,https://rpc.sentinel.quokkastake.io:443,https://rpc.trinityvalidator.com:443"
+GAS=200000
+GAS_ADJUSTMENT=1.05
+GAS_PRICE="0.1udvpn"
 DATACENTER_GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,9204ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1180852ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,122740ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,15342624udvpn"
 DATACENTER_HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,770ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1871892ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,18897ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,4160000udvpn"
 RESIDENTIAL_GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,9204ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1180852ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,122740ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,15342624udvpn"
@@ -42,6 +45,7 @@ WALLET_BALANCE_DENOM="DVPN"
 # API URLs
 FOXINODES_API_BALANCE="https://wapi.foxinodes.net/api/v1/address/"
 FOXINODES_API_CHECK_IP="https://wapi.foxinodes.net/api/v1/sentinel/check-ip"
+FOXINODES_API_DVPN_CONFIG="https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/configuration"
 
 ####################################################################################################
 # Configuration functions
@@ -128,6 +132,35 @@ function refresh_config_files()
 		sed -i "s/hourly_prices = .*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
 	fi
 
+	return 0;
+}
+
+# Load configuration from API
+function load_configuration()
+{
+	# Show waiting message
+	output_info "Please wait while the configuration is being retrieved..."
+	
+	# Retrieve configuration from API
+	local CONFIG=$(curl -s ${FOXINODES_API_DVPN_CONFIG})
+	
+	# If the value is empty, return 1
+	if [ -z "$CONFIG" ]
+	then
+		return 1;
+	fi
+	
+	# Set the values from the API
+	CHAIN_ID=$(echo "$CONFIG" | jq -r '.chain_id')
+	RPC_ADDRESSES=$(echo "$CONFIG" | jq -r '.rpc_addresses')
+	GAS=$(echo "$CONFIG" | jq -r '.gas')
+	GAS_ADJUSTMENT=$(echo "$CONFIG" | jq -r '.gas_adjustment')
+	GAS_PRICE=$(echo "$CONFIG" | jq -r '.gas_price')
+	DATACENTER_GIGABYTE_PRICES=$(echo "$CONFIG" | jq -r '.datacenter.gigabyte_prices')
+	DATACENTER_HOURLY_PRICES=$(echo "$CONFIG" | jq -r '.datacenter.hourly_prices')
+	RESIDENTIAL_GIGABYTE_PRICES=$(echo "$CONFIG" | jq -r '.residential.gigabyte_prices')
+	RESIDENTIAL_HOURLY_PRICES=$(echo "$CONFIG" | jq -r '.residential.hourly_prices')
+	
 	return 0;
 }
 
@@ -1282,6 +1315,9 @@ if [ "$(id -u)" != "0" ]; then
 	echo "This script must be run with sudo permissions"
 	exit 1
 fi
+
+# Load configuration from API (don't stop the script if it fails)
+load_configuration
 
 while true
 do
