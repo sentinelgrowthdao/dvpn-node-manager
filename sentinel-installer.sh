@@ -411,7 +411,7 @@ function install_docker()
 	fi
 	
 	# Install dependencies
-	apt install -y git openssl || { output_error "Failed to install dependencies."; return 1; }
+	apt install -y git || { output_error "Failed to install dependencies."; return 1; }
 	
 	# Download and execute the Docker installation script
 	set -o pipefail
@@ -1304,22 +1304,29 @@ fi
 # Check if whiptail is not installed
 if ! command -v whiptail &> /dev/null
 then
-	# Install whiptail
+	output_info "Installing whiptail, please wait..."
 	apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; return 1; }
 fi
 
 # Check if jq is not installed
 if ! command -v jq &> /dev/null
 then
-	# Install jq
+	output_info "Installing jq, please wait..."
 	apt install -y jq || { output_error "Failed to install jq."; return 1; }
 fi
 
 # Check if curl is not installed
 if ! command -v curl &> /dev/null
 then
-	# Install curl
+	output_info "Installing curl, please wait..."
 	apt install -y curl || { output_error "Failed to install curl."; return 1; }
+fi
+
+# Check if openssl is not installed
+if ! command -v openssl &> /dev/null
+then
+	output_info "Installing openssl, please wait..."
+	apt install -y openssl || { output_error "Failed to install openssl."; return 1; }
 fi
 
 # Load configuration from API (don't stop the script if it fails)
