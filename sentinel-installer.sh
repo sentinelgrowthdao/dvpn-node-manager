@@ -3,6 +3,9 @@
 # User and home directory
 USER_NAME=${SUDO_USER:-$(whoami)}
 USER_HOME=$(getent passwd ${USER_NAME} | cut -d: -f6)
+CONFIG_FILE="${USER_HOME}/.sentinelnode/config.toml"
+CONFIG_WIREGUARD="${USER_HOME}/.sentinelnode/wireguard.toml"
+CONFIG_V2RAY="${USER_HOME}/.sentinelnode/v2ray.toml"
 
 # Configuration variables
 CONTAINER_NAME="sentinel-dvpn-node"
@@ -17,10 +20,11 @@ WIREGUARD_PORT=16568
 V2RAY_PORT=16568
 CHAIN_ID="sentinelhub-2"
 WALLET_NAME="operator"
-BACKEND="test"
+MAX_PEERS=250
 HANDSHAKE_ENABLE="true"
 
 # Fixed values
+BACKEND="test"
 RPC_ADDRESSES="https://rpc.sentinel.co:443,https://rpc.sentinel.quokkastake.io:443,https://rpc.trinityvalidator.com:443"
 DATACENTER_GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,9204ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1180852ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,122740ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,15342624udvpn"
 DATACENTER_HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,770ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1871892ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,18897ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,4160000udvpn"
@@ -38,20 +42,17 @@ NODE_ADDRESS=""
 # Function to load configuration files into variables
 function load_config_files()
 {
-	locale CONFIG_FILE="${USER_HOME}/.sentinelnode/config.toml"
-	locale WIREGUARD_CONFIG="${USER_HOME}/.sentinelnode/wireguard.toml"
-	locale V2RAY_CONFIG="${USER_HOME}/.sentinelnode/v2ray.toml"
-
 	# Load config files into variables
 	NODE_MONIKER=$(grep "^moniker\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	NODE_TYPE=$(grep "^type\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	NODE_IP=$(grep "^remote_url\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
 	NODE_PORT=$(grep "^listen_on\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F":" '{print $2}')
-	WIREGUARD_PORT=$(grep "^listen_port\s*=" "${WIREGUARD_CONFIG}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	V2RAY_PORT=$(grep "^listen_port\s*=" "${V2RAY_CONFIG}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	WIREGUARD_PORT=$(grep "^listen_port\s*=" "${CONFIG_WIREGUARD}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	V2RAY_PORT=$(grep "^listen_port\s*=" "${CONFIG_V2RAY}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	CHAIN_ID=$(grep "^id\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	BACKEND=$(grep "^backend\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	MAX_PEERS=$(grep "^max_peers\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	# RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	# BACKEND=$(grep "^backend\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	WALLET_NAME=$(grep "^from\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	HANDSHAKE_ENABLE=$(awk 'BEGIN{FS=OFS="="; in_section=0} /^\[handshake\]$/{in_section=1; next} /^\[.*\]$/{if(in_section) in_section=0} in_section && /^enable\s*=\s*(true|false)/{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2; exit}' $CONFIG_FILE)
 
@@ -72,48 +73,51 @@ function load_config_files()
 function refresh_config_files()
 {
 	# Update configuration
-	sed -i "s/moniker = .*/moniker = \"${NODE_MONIKER}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set moniker."; return 1; }
+	sed -i "s/moniker = .*/moniker = \"${NODE_MONIKER}\"/g" ${CONFIG_FILE} || { output_error "Failed to set moniker."; return 1; }
 	
 	# Update chain_id parameter
-	sed -i "s/id = .*/id = \"${CHAIN_ID}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set chain ID."; return 1; }
+	sed -i "s/id = .*/id = \"${CHAIN_ID}\"/g" ${CONFIG_FILE} || { output_error "Failed to set chain ID."; return 1; }
 	
 	# Update rpc_addresses parameter
-	sed -i "s/rpc_addresses = .*/rpc_addresses = \"${RPC_ADDRESSES//\//\\/}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote RPC."; return 1; }
+	sed -i "s/rpc_addresses = .*/rpc_addresses = \"${RPC_ADDRESSES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set remote RPC."; return 1; }
 	
 	# Update node type parameter
-	sed -i "s/type = .*/type = \"${NODE_TYPE}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set node type."; return 1; }
+	sed -i "s/type = .*/type = \"${NODE_TYPE}\"/g" ${CONFIG_FILE} || { output_error "Failed to set node type."; return 1; }
 	
 	# Update remote_url parameter
-	sed -i "s/listen_on = .*/listen_on = \"0\\.0\\.0\\.0:${NODE_PORT}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
+	sed -i "s/listen_on = .*/listen_on = \"0\\.0\\.0\\.0:${NODE_PORT}\"/g" ${CONFIG_FILE} || { output_error "Failed to set remote URL."; return 1; }
 	
 	# Update remote_url parameter
-	sed -i "s/remote_url = .*/remote_url = \"https:\/\/${NODE_IP}:${NODE_PORT}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set remote URL."; return 1; }
+	sed -i "s/remote_url = .*/remote_url = \"https:\/\/${NODE_IP}:${NODE_PORT}\"/g" ${CONFIG_FILE} || { output_error "Failed to set remote URL."; return 1; }
 	
 	# Update backend parameter
-	sed -i "s/backend = .*/backend = \"${BACKEND}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set backend."; return 1; }
+	sed -i "s/backend = .*/backend = \"${BACKEND}\"/g" ${CONFIG_FILE} || { output_error "Failed to set backend."; return 1; }
 	
 	# Update handshake enable parameter
 	sed -i '/^\[handshake\]$/,/^\[/!b; /^\[handshake\]$/,/^\[/ {/^[[:space:]]*enable[[:space:]]*=/s/=.*/= '"${HANDSHAKE_ENABLE}"'/; /^[[:space:]]*\[/b}' "${CONFIG_FILE}"
 
+	# Update max_peers parameter
+	sed -i "s/max_peers = .*/max_peers = ${MAX_PEERS}/g" ${CONFIG_FILE} || { output_error "Failed to set max peers."; return 1; }
+
 	# Update WireGuard port
-	sed -i "s/listen_port = .*/listen_port = ${WIREGUARD_PORT}/g" ${USER_HOME}/.sentinelnode/wireguard.toml || { output_error "Failed to set WireGuard port."; return 1; }
+	sed -i "s/listen_port = .*/listen_port = ${WIREGUARD_PORT}/g" ${CONFIG_WIREGUARD} || { output_error "Failed to set WireGuard port."; return 1; }
 	
 	# Update V2Ray port
-	sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${USER_HOME}/.sentinelnode/v2ray.toml || { output_error "Failed to set V2Ray port."; return 1; }
+	sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${CONFIG_V2RAY} || { output_error "Failed to set V2Ray port."; return 1; }
 	
 	if [ "$NODE_LOCATION" == "residential" ]
 	then
 		# Update gigabyte_prices parameter
-		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${RESIDENTIAL_GIGABYTE_PRICES//\//\\/}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
+		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${RESIDENTIAL_GIGABYTE_PRICES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set gigabyte prices."; return 1; }
 		
 		# Update hourly_prices parameter
-		sed -i "s/hourly_prices = .*/hourly_prices = \"${RESIDENTIAL_HOURLY_PRICES//\//\\/}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
+		sed -i "s/hourly_prices = .*/hourly_prices = \"${RESIDENTIAL_HOURLY_PRICES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
 	else
 		# Update gigabyte_prices parameter
-		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${DATACENTER_GIGABYTE_PRICES//\//\\/}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set gigabyte prices."; return 1; }
+		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${DATACENTER_GIGABYTE_PRICES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set gigabyte prices."; return 1; }
 		
 		# Update hourly_prices parameter
-		sed -i "s/hourly_prices = .*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/g" ${USER_HOME}/.sentinelnode/config.toml || { output_error "Failed to set hourly prices."; return 1; }
+		sed -i "s/hourly_prices = .*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
 	fi
 
 	return 0;
@@ -250,9 +254,15 @@ function output_log()
 {
 	if [ "$OUTPUT_DEBUG" = true ]; then
 		local message="$1"
-		echo -e "\e[32m${message}\e[0m"
+		echo -e "\e[34m${message}\e[0m"
 	fi
+}
 
+# Function to output information messages
+function output_info()
+{
+	local message="$1"
+	echo -e "\e[32m${message}\e[0m"
 }
 
 # Function to output error messages
@@ -397,6 +407,7 @@ function container_install()
 	fi
 	
 	# Pull the Sentinel image
+	output_info "Pulling the Sentinel image, please wait..."
 	docker pull ${IMAGE} || { output_error "Failed to pull the Sentinel image."; return 1; }
 	docker tag ${IMAGE} ${CONTAINER_NAME} || { output_error "Failed to tag the Sentinel image."; return 1; }
 	
@@ -497,11 +508,7 @@ function wallet_initialization()
 		if whiptail --title "Wallet Exists" --yesno "A wallet already exists. Do you want to delete the existing wallet and continue?" 8 78
 		then
 			# Delete existing wallet
-			docker run --rm \
-				--interactive \
-				--tty \
-				--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
-				${CONTAINER_NAME} process keys delete
+			wallet_remove
 		else
 			output_log "Wallet already exists."
 			return 0;
@@ -518,19 +525,21 @@ function wallet_initialization()
 		MNEMONIC=$(whiptail --inputbox "Please enter your wallet's mnemonic:" 8 78 --title "Wallet Mnemonic" 3>&1 1>&2 2>&3) || { output_error "Failed to get mnemonic."; return 1; }
 		
 		# Restore wallet
+		output_info "Restoring wallet, please wait..."
 		echo "$MNEMONIC" | docker run --rm \
 			--interactive \
 			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 			${CONTAINER_NAME} process keys add --recover || { output_error "Failed to restore wallet."; return 1; }
 	else
 		# Create new wallet
+		output_info "Creating new wallet, please wait..."
 		OUTPUT=$(docker run --rm \
 					--interactive \
 					--tty \
 					--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 					${CONTAINER_NAME} process keys add)
 		
-		output_log "Wallet creation output: ${OUTPUT}"
+		# output_log "Wallet creation output: ${OUTPUT}"
 		
 		# If the ouput contains "Important" then extract the mnemonic
 		if echo "$OUTPUT" | grep -q "Important"
@@ -541,7 +550,8 @@ function wallet_initialization()
 			return 1
 		fi
 		
-		output_log "Wallet mnemonic: ${MNEMONIC}"
+		# Remove end of line
+		MNEMONIC=$(echo "$MNEMONIC" | tr -d '\r')
 		
 		# Découpage intelligent en groupes de mots
 		formatted_mnemonic=$(echo "$MNEMONIC" | tr -s ' ' '\n' | awk '{
@@ -561,11 +571,49 @@ function wallet_initialization()
 	return 0;
 }
 
+# Function to check if wallet exists
+function wallet_exist()
+{
+	# Check if a wallet with the specified name exists
+	local wallet_list_output
+	wallet_list_output=$(docker run --rm \
+		--interactive \
+		--tty \
+		--volume "${USER_HOME}/.sentinelnode:/root/.sentinelnode" \
+		"${CONTAINER_NAME}" process keys list)
+
+	# Use grep to check if the wallet name is in the list
+	if echo "$wallet_list_output" | grep -q "$WALLET_NAME"; then
+		return 0  # Wallet exists
+	else
+		return 1  # Wallet does not exist
+	fi
+}
+
+# Function to remove the wallet
+function wallet_remove()
+{
+	# If wallet does not exist, return 0
+	if ! wallet_exist
+	then
+		return 0;
+	fi
+	
+	# Delete existing wallet
+	docker run --rm \
+		--interactive \
+		--tty \
+		--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
+		${CONTAINER_NAME} process keys delete $WALLET_NAME || { output_error "Failed to delete wallet."; return 1; }
+	
+	return 0;
+}
+
 # Function to get the public and node addresses of the wallet
 function wallet_addresses()
 {
 	# Show waiting message
-	echo "Please wait while the wallet addresses are being retrieved..."
+	output_info "Please wait while the wallet addresses are being retrieved..."
 
 	# Execute Docker command once and store output
 	local WALLET_INFO=$(docker run --rm \
@@ -577,7 +625,11 @@ function wallet_addresses()
 	# Extract public and node addresses from the output
 	PUBLIC_ADDRESS=$(echo "$WALLET_INFO" | awk '{print $3}')
 	NODE_ADDRESS=$(echo "$WALLET_INFO" | awk '{print $2}')
-
+	
+	# Remove end of line
+	PUBLIC_ADDRESS=$(echo "$PUBLIC_ADDRESS" | tr -d '\r')
+	NODE_ADDRESS=$(echo "$NODE_ADDRESS" | tr -d '\r')
+	
 	return 0;
 }
 
@@ -599,6 +651,7 @@ function firewall_configure()
 	if ! command -v ufw &> /dev/null
 	then
 		# Install UFW
+		output_info "Installing UFW, please wait..."
 		apt install -y ufw || { output_error "Failed to install UFW."; return 1; }
 	fi
 	
@@ -701,12 +754,19 @@ function ask_node_type()
 	return 0;
 }
 
+# Function to ask for max peers
+function ask_max_peers()
+{
+	# Ask for max peers
+	MAX_PEERS=$(whiptail --inputbox "Please enter the maximum number of peers you want to connect to:" 8 78 "$MAX_PEERS" --title "Max Peers" 3>&1 1>&2 2>&3) || { output_error "Failed to get max peers."; return 1; }
+	return 0;
+}
+
 # Function to ask for moniker
 function ask_moniker()
 {
 	# Ask for moniker
 	NODE_MONIKER=$(whiptail --inputbox "Please enter your node's moniker:" 8 78 "$NODE_MONIKER" --title "Node Moniker" 3>&1 1>&2 2>&3) || { output_error "Failed to get moniker."; return 1; }
-	
 	return 0;
 }
 
@@ -718,7 +778,7 @@ function ask_moniker()
 function message_wait_funds()
 {
 	# Get public address
-	wallet_public_address || { output_error "Failed to get public address."; return 1; }
+	wallet_addresses || { output_error "Failed to get public address."; return 1; }
 	
 	# If public address doesn't start with "sent" then return error
 	if [[ ! ${PUBLIC_ADDRESS} == "sent"* ]]; then
@@ -885,6 +945,7 @@ function menu_settings()
 				;;
 			3)
 				ask_node_type || return 1;
+				ask_max_peers || return 1;
 
 				refresh_config_files || return 1;
 				container_restart || return 1;
@@ -911,11 +972,10 @@ function menu_wallet()
 			return 0;
 		else
 			# Confirm wallet removal
-			if whiptail --title "Confirm Removal" --yesno "Are you sure you want to remove the wallet address?" 8 78
+			if whiptail --title "Confirm Removal" --defaultno --yesno "Are you sure you want to remove the wallet address?" 8 78
 			then
-				# Remove wallet
-				# wallet_remove || return 1;
-
+				# Delete existing wallet
+				wallet_remove || return 1;
 				# Initialize new wallet
 				wallet_initialization || return 1;
 			fi
