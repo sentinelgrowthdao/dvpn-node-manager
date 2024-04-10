@@ -464,8 +464,8 @@ function container_install()
 # Function to start the Docker container
 function container_start()
 {
-	# Read config file and check type of node
-	TYPE=$(cat ${USER_HOME}/.sentinelnode/config.toml | grep "type" | awk -F" = " '{print $2}' | tr -d '"')
+	# Show waiting message
+	output_info "Please wait while the Sentinel container is being started..."
 	
 	# If container is already created, check if it is running
 	if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
@@ -473,13 +473,13 @@ function container_start()
 		# Check if the container is not running
 		if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
 			# Container is not running, attempt to start it
-			docker start ${CONTAINER_NAME} || { output_error "Failed to start the Sentinel container."; return 1; }
+			docker start ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to start the Sentinel container."; return 1; }
 		fi
 		return 0
 	fi
 
 	# If node type is wireguard
-	if [ "$TYPE" == "wireguard" ]
+	if [ "$NODE_TYPE" == "wireguard" ]
 	then
 		# Start WireGuard node
 		docker run -d \
@@ -498,8 +498,8 @@ function container_start()
 			--sysctl net.ipv6.conf.default.forwarding=1 \
 			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
 			--publish ${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp \
-			${CONTAINER_NAME} process start || { output_error "Failed to start WireGuard node."; return 1; }
-	elif [ "$TYPE" == "v2ray" ]
+			${CONTAINER_NAME} process start > /dev/null 2>&1 || { output_error "Failed to start WireGuard node."; return 1; }
+	elif [ "$NODE_TYPE" == "v2ray" ]
 	then
 		# Start V2Ray node
 		docker run -d \
@@ -508,7 +508,7 @@ function container_start()
 			--volume "${USER_HOME}/.sentinelnode:/root/.sentinelnode" \
 			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
 			--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
-			${CONTAINER_NAME} process start || { output_error "Failed to start V2Ray node."; return 1; }
+			${CONTAINER_NAME} process start > /dev/null 2>&1 || { output_error "Failed to start V2Ray node."; return 1; }
 	else
 		output_error "Invalid node type."
 		return 1
@@ -520,6 +520,7 @@ function container_start()
 # Function to stop the Docker container
 function container_stop()
 {
+	output_info "Please wait while the Sentinel container is being stopped..."
 	docker stop ${CONTAINER_NAME} || { output_error "Failed to stop the Sentinel container."; return 1; }
 	return 0;
 }
@@ -527,6 +528,7 @@ function container_stop()
 # Function to restart the Docker container
 function container_restart()
 {
+	output_info "Please wait while the Sentinel container is being restarted..."
 	docker restart ${CONTAINER_NAME} || { output_error "Failed to restart the Sentinel container."; return 1; }
 	return 0;
 }
@@ -717,7 +719,7 @@ function wallet_balance()
 function firewall_configure()
 {
 	# Ask if user wants to configure the firewall
-	if ! whiptail --title "Firewall Configuration" --defaultno --yesno "Do you want to configure the firewall to allow incoming connections to the node?" 8 78
+	if ! whiptail --title "Firewall Configuration" --defaultno --yesno "Do you want to configure the firewall to allow incoming connections to the node?\nBecarfule, old rules will not be deleted." 8 78
 	then
 		return 0;
 	fi
@@ -785,6 +787,69 @@ function ask_remote_ip()
 	
 	# Set value received from whiptail to NODE_IP
 	NODE_IP=$VALUE
+	return 0;
+}
+
+# Function to ask for node port
+function ask_node_port()
+{
+	# Ask for node port
+	local VALUE=$(whiptail --inputbox "Please enter the port number you want to use for the node:" 8 78 "$NODE_PORT" --title "Node Port" 3>&1 1>&2 2>&3)
+	
+	# Check if the user pressed Cancel
+	if [ $? -ne 0 ]; then
+		return 1
+	fi
+
+	# Check if the user entered a value
+	if [ -z "$VALUE" ]; then
+		return 2
+	fi
+
+	# Set value received from whiptail to NODE_PORT
+	NODE_PORT=$VALUE
+	return 0;
+}
+
+# Function to ask for WireGuard port
+function ask_wireguard_port()
+{
+	# Ask for WireGuard port
+	local VALUE=$(whiptail --inputbox "Please enter the port number you want to use for WireGuard:" 8 78 "$WIREGUARD_PORT" --title "WireGuard Port" 3>&1 1>&2 2>&3)
+	
+	# Check if the user pressed Cancel
+	if [ $? -ne 0 ]; then
+		return 1
+	fi
+
+	# Check if the user entered a value
+	if [ -z "$VALUE" ]; then
+		return 2
+	fi
+
+	# Set value received from whiptail to WIREGUARD_PORT
+	WIREGUARD_PORT=$VALUE
+	return 0;
+}
+
+# Function to ask for V2Ray port
+function ask_v2ray_port()
+{
+	# Ask for V2Ray port
+	local VALUE=$(whiptail --inputbox "Please enter the port number you want to use for V2Ray:" 8 78 "$V2RAY_PORT" --title "V2Ray Port" 3>&1 1>&2 2>&3)
+	
+	# Check if the user pressed Cancel
+	if [ $? -ne 0 ]; then
+		return 1
+	fi
+
+	# Check if the user entered a value
+	if [ -z "$VALUE" ]; then
+		return 2
+	fi
+
+	# Set value received from whiptail to V2RAY_PORT
+	V2RAY_PORT=$VALUE
 	return 0;
 }
 
@@ -1088,12 +1153,29 @@ function menu_settings()
 				fi
 				;;
 			2)
-				if ask_remote_ip;
+				if ask_remote_ip && ask_node_port
 				then
-					refresh_config_files || return 1;
-					container_restart || return 1;
-					# Display message indicating that the settings have been updated
-					whiptail --title "Settings Updated" --msgbox "Network settings have been updated." 8 78
+					if [ "$NODE_TYPE" = "wireguard" ]
+					then
+						if ask_wireguard_port;
+						then
+							firewall_configure || return 1;
+							refresh_config_files || return 1;
+							container_restart || return 1;
+							# Display message indicating that the settings have been updated
+							whiptail --title "Settings Updated" --msgbox "Network settings have been updated." 8 78
+						fi
+					elif [ "$NODE_TYPE" = "v2ray" ]
+					then
+						if ask_v2ray_port
+						then
+							firewall_configure || return 1;
+							refresh_config_files || return 1;
+							container_restart || return 1;
+							# Display message indicating that the settings have been updated
+							whiptail --title "Settings Updated" --msgbox "Network settings have been updated." 8 78
+						fi
+					fi
 				fi
 				;;
 			3)
