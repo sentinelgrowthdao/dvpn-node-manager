@@ -238,13 +238,6 @@ function generate_certificate()
 # Function to check if all dependencies are installed
 function check_installation()
 {
-	# If curl is not installed, return false
-	if ! command -v curl &> /dev/null
-	then
-		output_log "Curl is not installed."
-		return 1
-	fi
-	
 	# If docker is not installed, return false
 	if ! command -v docker &> /dev/null
 	then
