@@ -693,6 +693,9 @@ function ask_node_type()
 	then
 		# Force handshake to be disabled for V2Ray
 		HANDSHAKE_ENABLE="false"
+	else
+		# Force handshake to be enabled for WireGuard
+		HANDSHAKE_ENABLE="true"
 	fi
 
 	return 0;
