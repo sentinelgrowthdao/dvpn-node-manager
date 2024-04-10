@@ -14,6 +14,7 @@ FIREWALL="ufw"
 NODE_MONIKER=""
 NODE_TYPE="wireguard"
 NODE_IP="0.0.0.0"
+NODE_COUNTRY="NA"
 NODE_PORT=16567
 NODE_LOCATION="datacenter"
 WIREGUARD_PORT=16568
@@ -40,6 +41,7 @@ WALLET_BALANCE_DENOM="DVPN"
 
 # API URLs
 FOXINODES_API_BALANCE="https://wapi.foxinodes.net/api/v1/address/"
+FOXINODES_API_CHECK_IP="https://wapi.foxinodes.net/api/v1/sentinel/check-ip"
 
 ####################################################################################################
 # Configuration functions
@@ -171,6 +173,13 @@ function generate_certificate()
 		return 0
 	fi
 	
+	# If node country is not set, get public IP
+	if [ "$NODE_COUNTRY" = "NA" ] || [ -z "$NODE_COUNTRY" ];
+	then
+		check_ip || { output_error "Failed to get country of the node."; }
+	fi
+	
+	
 	# Generate certificate
 	openssl req -new \
 	-newkey ec \
@@ -180,7 +189,7 @@ function generate_certificate()
 	-days 365 \
 	-nodes \
 	-out ${USER_HOME}/.sentinelnode/tls.crt \
-	-subj "/C=NA/ST=NA/L=./O=NA/OU=./CN=." \
+	-subj "/C=${NODE_COUNTRY}/ST=NA/L=./O=NA/OU=./CN=." \
 	-keyout ${USER_HOME}/.sentinelnode/tls.key || { output_error "Failed to generate certificate."; return 1; }
 	
 	chown root:root ${USER_HOME}/.sentinelnode/tls.crt && \
@@ -319,6 +328,31 @@ function os_raspbian()
 	else
 		return 1 
 	fi
+}
+
+# Function to get the public IP address
+function check_ip()
+{
+	# Show waiting message
+	output_info "Please wait while the public IP is being retrieved..."
+	# Retrieve the current public IP using wget and sed
+	VALUE=$(curl -s $FOXINODES_API_CHECK_IP || echo "")
+	
+	# Reset values
+	NODE_IP="0.0.0.0"
+	NODE_COUNTRY="NA"
+	
+	# If VALUE is empty, return 1
+	if [ -z "$VALUE" ]
+	then
+		return 1;
+	fi
+	
+	# Parse the JSON response to extract the values
+	NODE_IP=$(echo "$VALUE" | jq -r '.ip')
+	NODE_COUNTRY=$(echo "$VALUE" | jq -r '.iso_code')
+	
+	return 0;
 }
 
 ####################################################################################################
@@ -733,16 +767,24 @@ function ask_remote_ip()
 	# If NODE_IP egale to 0.0.0.0 or empty, then retrieve the current public IP
 	if [ "$NODE_IP" = "0.0.0.0" ] || [ -z "$NODE_IP" ];
 	then
-		# Retrieve the current public IP using wget and sed
-		NODE_IP=$(wget -q -O - checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//')
+		check_ip || { output_error "Failed to get public IP, please check your network configuration."; return 1; }
 	fi
 	
 	# Ask for remote IP
 	local VALUE=$(whiptail --inputbox "Please enter your node's public IP address:" 8 78 "$NODE_IP" --title "Node IP" 3>&1 1>&2 2>&3) || return 1;
+	
+	# Check if the user pressed Cancel
+	if [ $? -ne 0 ]; then
+		return 1
+	fi
 
+	# Check if the user entered a value
+	if [ -z "$VALUE" ]; then
+		return 2
+	fi
+	
 	# Set value received from whiptail to NODE_IP
 	NODE_IP=$VALUE
-	
 	return 0;
 }
 
@@ -763,7 +805,7 @@ function ask_node_location()
 	local VALUE=$(whiptail --title "Node Location" --radiolist "Please select the type of validation node you want to run:" 15 78 2 \
 		"datacenter" "Datacenter" $datacenter_state \
 		"residential" "Residential" $residential_state 3>&1 1>&2 2>&3) || return 1;
-
+	
 	# Check if the user pressed Cancel
 	if [ $? -ne 0 ]; then
 		return 1
