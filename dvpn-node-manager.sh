@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Installer version
+VERSION="alpha-0.1.0"
+
 # User and home directory
 USER_NAME=${SUDO_USER:-$(whoami)}
 USER_HOME=$(getent passwd ${USER_NAME} | cut -d: -f6)
