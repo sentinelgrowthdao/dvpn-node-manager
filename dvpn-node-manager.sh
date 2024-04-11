@@ -256,6 +256,40 @@ function remove_config_files()
 }
 
 ####################################################################################################
+# Update functions
+####################################################################################################
+
+# Function to update the Sentinel container
+function update_container
+{
+	output_info "Please wait while the Sentinel container is being updated..."
+	
+	container_remove || return 1;
+	container_install || return 1;
+	container_start || return 1;
+	
+	# Display message indicating that the image is up to date
+	whiptail --title "Update Complete" --msgbox "Sentinel image is up to date." 8 78
+	
+	return 0;
+}
+
+# Function to update the Sentinel configuration
+function update_configuration
+{
+	output_info "Please wait while the Sentinel configuration is being updated..."
+	
+	# Load configuration from API
+	load_configuration || { output_error "Failed to load configuration from API."; return 1; }
+	refresh_config_files || return 1;
+	
+	# Display message indicating that the configuration is up to date
+	whiptail --title "Update Complete" --msgbox "Sentinel configuration is up to date." 8 78
+	
+	return 0;
+}
+
+####################################################################################################
 # Utility functions
 ####################################################################################################
 
@@ -1216,7 +1250,7 @@ function menu_configuration()
 	# Load configuration into variables
 	load_config_files || return 1;
 
-	choice=$(whiptail --title "Welcome to Sentinel Configuration" --menu "Welcome to the Sentinel configuration process. Please select an option:" 15 78 5 \
+	CHOICE=$(whiptail --title "Welcome to Sentinel Configuration" --menu "Welcome to the Sentinel configuration process. Please select an option:" 15 78 5 \
 		"Settings" "Change node configuration" \
 		"Wallet" "View wallet information" \
 		"Node" "Perform node actions" \
@@ -1228,7 +1262,7 @@ function menu_configuration()
 	fi
 
 	# Handle selected option
-	case $choice in
+	case $CHOICE in
 		"Settings")
 			menu_settings
 			;;
@@ -1253,10 +1287,10 @@ function menu_settings()
 			"2" "Network Settings" \
 			"3" "VPN Settings" \
 			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3)
-
+		
+		# If user chooses 'Back', break the loop to return to previous menu
 		EXITSTATUS=$?
 		if [ $EXITSTATUS -eq 1 ]; then
-			# If user chooses 'Back', break the loop to return to previous menu
 			break
 		fi
 
@@ -1324,7 +1358,7 @@ function menu_wallet()
 # Function to display the node menu
 function menu_node()
 {
-	local choice=""
+	local CHOICE=""
 	local status_msg=""
 
 	while true
@@ -1333,7 +1367,7 @@ function menu_node()
 		if container_running
 		then
 			status_msg="Node Status: Running"
-			choice=$(whiptail --title "Sentinel Node Menu" \
+			CHOICE=$(whiptail --title "Sentinel Node Menu" \
 				--yes-button "Select" --no-button "Back" \
 				--menu "$status_msg\nChoose an option:" 15 78 4 \
 				"Restart" "Sentinel Node" \
@@ -1341,7 +1375,7 @@ function menu_node()
 				"Remove" "Sentinel Node and Wallet" 3>&1 1>&2 2>&3)
 		else
 			status_msg="Node Status: Stopped"
-			choice=$(whiptail --title "Sentinel Node Menu" \
+			CHOICE=$(whiptail --title "Sentinel Node Menu" \
 				--yes-button "Select" --no-button "Back" \
 				--menu "$status_msg\nChoose an option:" 15 78 3 \
 				"Start" "Sentinel Node" \
@@ -1349,7 +1383,7 @@ function menu_node()
 		fi
 
 		# Handle selected option
-		case $choice in
+		case $CHOICE in
 			"Restart")
 				container_restart
 				;;
@@ -1393,16 +1427,33 @@ function menu_node()
 # Function to update the Sentinel image
 function menu_update()
 {
-	container_install || return 1;
-
-	container_restart || return 1;
-
-	# Display message indicating that the image is up to date
-	whiptail --title "Update Complete" --msgbox "Sentinel image is up to date." 8 78
-
+	while true
+	do
+		# Menu pour choisir entre metre à jour le container et la configuration blockchain
+		CHOICE=$(whiptail --title "Update Sentinel Node" --menu "Choose an option:" 15 60 5 \
+			"Container" "Update the Sentinel container" \
+			"Configuration" "Update the Sentinel configuration" \
+			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3)
+		
+		# If user chooses 'Back', break the loop to return to previous menu
+		EXITSTATUS=$?
+		if [ $EXITSTATUS -eq 1 ]; then
+			return 0
+		fi
+		
+		case $CHOICE in
+			"Container")
+				update_container
+				;;
+			"Configuration")
+				update_configuration
+				;;
+			
+		esac
+	done
+	
 	return 0;
 }
-
 
 ####################################################################################################
 # Main function
