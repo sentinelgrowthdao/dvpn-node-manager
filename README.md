@@ -2,7 +2,7 @@
 
 This script `dvpn-node-manager.sh` is designed to facilitate the installation and use of Sentinel Config.
 
-## Installation
+## Node Installation
 
 To install Sentinel Config, you can follow the steps below.
 
@@ -29,3 +29,11 @@ sudo bash dvpn-node-manager.sh
    If Docker is not already installed on the machine, it will be installed followed by a system reboot.
 
 5. Restarting the script after installation will allow for modifying settings and managing the wallet or node.
+
+## Uninstalling the Node
+
+To uninstall the Sentinel Config node, you can execute the script with the `uninstall` parameter:
+
+```bash
+sudo bash dvpn-node-manager.sh uninstall
+```

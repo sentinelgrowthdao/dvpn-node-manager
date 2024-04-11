@@ -1458,16 +1458,35 @@ then
 	apt install -y openssl || { output_error "Failed to install openssl."; return 1; }
 fi
 
-# Load configuration from API (don't stop the script if it fails)
-load_configuration
-
-while true
-do
-	# Check if installation already exists
-	if check_installation
-	then
-		menu_configuration;
-	else
-		menu_installation || exit 1;
-	fi
-done
+# If parameter "uninstall" is passed, remove the Sentinel node
+if [ "$1" == "uninstall" ]
+then
+	# Remove the Sentinel node
+	container_remove || exit 1;
+	
+	# Remove the configuration files
+	remove_config_files || exit 1;
+	
+	# Remove the Sentinel node directory
+	rm -rf ${USER_HOME}/.sentinelnode || { output_error "Failed to remove Sentinel node directory."; exit 1; }
+	
+	# Display message indicating that the Sentinel node has been removed
+	whiptail --title "Uninstallation Complete" --msgbox "The Sentinel node has been successfully removed." 8 78
+	
+	# Exit the script
+	exit 0
+else
+	# Load configuration from API (don't stop the script if it fails)
+	load_configuration
+	
+	while true
+	do
+		# Check if installation already exists
+		if check_installation
+		then
+			menu_configuration;
+		else
+			menu_installation || exit 1;
+		fi
+	done
+fi
