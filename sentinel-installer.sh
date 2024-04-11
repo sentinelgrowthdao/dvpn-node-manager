@@ -570,6 +570,25 @@ function container_running()
 	fi
 }
 
+# Function to remove the Docker container
+function container_remove()
+{
+	# If container does not exist, return 0
+	if ! docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+	then
+		return 0
+	fi
+	
+	# Stop the container
+	container_stop
+	
+	# Remove the container
+	output_info "Please wait while the Sentinel container is being removed..."
+	docker rm --force ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to remove the Sentinel container."; return 1; }
+	
+	return 0;
+}
+
 ####################################################################################################
 # Wallet functions
 ####################################################################################################
@@ -1210,23 +1229,8 @@ function menu_wallet()
 	# Get wallet balance
 	wallet_balance || { output_error "Failed to retrieve wallet balance, API may be down."; return 1; }
 	
-	while true
-	do
-		# Display wallet information and prompt for next action
-		if whiptail --title "Wallet Information" --yes-button "Back" --no-button "Remove Wallet" --yesno "Public Address: ${PUBLIC_ADDRESS}\nNode Address: ${NODE_ADDRESS}\nDVPN Balance: ${WALLET_BALANCE}" 12 78
-		then
-			return 0;
-		else
-			# Confirm wallet removal
-			if whiptail --title "Confirm Removal" --defaultno --yesno "Are you sure you want to remove the wallet address?" 8 78
-			then
-				# Delete existing wallet
-				wallet_remove || return 1;
-				# Initialize new wallet
-				wallet_initialization || return 1;
-			fi
-		fi
-	done
+	# Display wallet information and prompt for next action
+	whiptail --title "Wallet Information" --msgbox "Public Address: ${PUBLIC_ADDRESS}\nNode Address: ${NODE_ADDRESS}\nDVPN Balance: ${WALLET_BALANCE}" 12 78
 }
 
 # Function to display the node menu
@@ -1241,15 +1245,19 @@ function menu_node()
 		if container_running
 		then
 			status_msg="Node Status: Running"
-			choice=$(whiptail --title "Sentinel Node Menu" --menu "$status_msg\nChoose an option:" 15 78 4 \
+			choice=$(whiptail --title "Sentinel Node Menu" \
+				--yes-button "Select" --no-button "Back" \
+				--menu "$status_msg\nChoose an option:" 15 78 4 \
 				"Restart" "Restart Sentinel Node" \
 				"Stop" "Stop Sentinel Node" \
-				"Back" "Return to previous menu" 3>&1 1>&2 2>&3)
+				"Remove" "Erase Sentinel Node and Wallet" 3>&1 1>&2 2>&3)
 		else
 			status_msg="Node Status: Stopped"
-			choice=$(whiptail --title "Sentinel Node Menu" --menu "$status_msg\nChoose an option:" 15 78 3 \
+			choice=$(whiptail --title "Sentinel Node Menu" \
+				--yes-button "Select" --no-button "Back" \
+				--menu "$status_msg\nChoose an option:" 15 78 3 \
 				"Start" "Start Sentinel Node" \
-				"Back" "Return to previous menu" 3>&1 1>&2 2>&3)
+				"Remove" "Erase Sentinel Node and Wallet" 3>&1 1>&2 2>&3)
 		fi
 
 		# Handle selected option
@@ -1262,6 +1270,16 @@ function menu_node()
 				;;
 			"Start")
 				container_start
+				;;
+			"Remove")
+				if whiptail --title "Confirm Container Removal" --defaultno --yesno "Are you sure you want to remove the dvpn node container?" 8 78
+				then
+					container_remove
+				fi
+				if whiptail --title "Confirm Wallet Removal" --defaultno --yesno "Are you sure you want to remove the wallet?" 8 78
+				then
+					wallet_remove
+				fi
 				;;
 			*)
 				break
