@@ -3,9 +3,10 @@
 # User and home directory
 USER_NAME=${SUDO_USER:-$(whoami)}
 USER_HOME=$(getent passwd ${USER_NAME} | cut -d: -f6)
-CONFIG_FILE="${USER_HOME}/.sentinelnode/config.toml"
-CONFIG_WIREGUARD="${USER_HOME}/.sentinelnode/wireguard.toml"
-CONFIG_V2RAY="${USER_HOME}/.sentinelnode/v2ray.toml"
+CONFIG_DIR="${USER_HOME}/.sentinelnode"
+CONFIG_FILE="${CONFIG_DIR}/config.toml"
+CONFIG_WIREGUARD="${CONFIG_DIR}/wireguard.toml"
+CONFIG_V2RAY="${CONFIG_DIR}/v2ray.toml"
 
 # Configuration variables
 CONTAINER_NAME="sentinel-dvpn-node"
@@ -228,6 +229,20 @@ function generate_certificate()
 	chown root:root ${USER_HOME}/.sentinelnode/tls.crt && \
 	chown root:root ${USER_HOME}/.sentinelnode/tls.key || { output_error "Failed to change ownership of certificate files."; return 1; }
 	
+	return 0;
+}
+
+# Function to remove configuration files
+function remove_config_files()
+{
+	# If configuration files do not exist, return 0
+	if [ ! -d "${CONFIG_DIR}" ]
+	then
+		return 0;
+	fi
+
+	# Remove configuration files
+	rm -rf ${CONFIG_DIR}
 	return 0;
 }
 
@@ -1279,6 +1294,10 @@ function menu_node()
 				if whiptail --title "Confirm Wallet Removal" --defaultno --yesno "Are you sure you want to remove the wallet?" 8 78
 				then
 					wallet_remove
+				fi
+				if whiptail --title "Confirm Configuration Removal" --defaultno --yesno "Are you sure you want to remove the configuration files?" 8 78
+				then
+					remove_config_files
 				fi
 				;;
 			*)
