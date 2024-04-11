@@ -1,6 +1,6 @@
-# sentinel-installer.sh
+# dVPN Node Manager
 
-This script `sentinel-installer.sh` is designed to facilitate the installation and use of Sentinel Config.
+This script `dvpn-node-manager.sh` is designed to facilitate the installation and use of Sentinel Config.
 
 ## Installation
 
@@ -9,19 +9,19 @@ To install Sentinel Config, you can follow the steps below.
 1. Download the script using the `curl` command:
 
 ```bash
-curl -o $HOME/sentinel-installer.sh https://raw.githubusercontent.com/Foxinodes/sentinel-installer/main/sentinel-installer.sh
+curl -o $HOME/dvpn-node-manager.sh https://raw.githubusercontent.com/Foxinodes/dvpn-node-manager/main/dvpn-node-manager.sh
 ```
 
 2. Grant execution permissions to the script using the `chmod` command:
 
 ```bash
-chmod +x sentinel-installer.sh
+chmod +x dvpn-node-manager.sh
 ```
 
 3. Execute the script using the `sudo bash` command:
 
 ```bash
-sudo bash sentinel-installer.sh
+sudo bash dvpn-node-manager.sh
 ```
 
 4. Follow the installation process as indicated by the interface.
