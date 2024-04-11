@@ -1263,16 +1263,16 @@ function menu_node()
 			choice=$(whiptail --title "Sentinel Node Menu" \
 				--yes-button "Select" --no-button "Back" \
 				--menu "$status_msg\nChoose an option:" 15 78 4 \
-				"Restart" "Restart Sentinel Node" \
-				"Stop" "Stop Sentinel Node" \
-				"Remove" "Erase Sentinel Node and Wallet" 3>&1 1>&2 2>&3)
+				"Restart" "Sentinel Node" \
+				"Stop" "Sentinel Node" \
+				"Remove" "Sentinel Node and Wallet" 3>&1 1>&2 2>&3)
 		else
 			status_msg="Node Status: Stopped"
 			choice=$(whiptail --title "Sentinel Node Menu" \
 				--yes-button "Select" --no-button "Back" \
 				--menu "$status_msg\nChoose an option:" 15 78 3 \
-				"Start" "Start Sentinel Node" \
-				"Remove" "Erase Sentinel Node and Wallet" 3>&1 1>&2 2>&3)
+				"Start" "Sentinel Node" \
+				"Remove" "Sentinel Node and Wallet" 3>&1 1>&2 2>&3)
 		fi
 
 		# Handle selected option
