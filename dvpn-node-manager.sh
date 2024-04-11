@@ -693,6 +693,22 @@ function container_remove()
 	return 0;
 }
 
+# Function to display the container logs
+function container_logs()
+{
+	# Show waiting message
+	output_info "Please wait while the Sentinel container logs are being retrieved..."
+	# Display message indicating that the Sentinel container logs are being retrieved
+	output_info "Press 'Ctrl + C' to exit the logs."
+	
+	# Wait for 2 seconds
+	sleep 2
+	# Retrieve the container logs
+	docker logs -f -n 100 ${CONTAINER_NAME} || { output_error "Failed to retrieve the Sentinel container logs."; return 1; }
+	
+	return 0;
+}
+
 ####################################################################################################
 # Wallet functions
 ####################################################################################################
@@ -1589,6 +1605,16 @@ then
 	
 	# Exit the script
 	exit 0
+elif [ "$1" == "logs" ]
+then
+	# Check if the Sentinel container is running
+	if ! container_running
+	then
+		output_error "The Sentinel container is not running."
+		exit 1
+	fi
+	# Display the container logs
+	container_logs || exit 1;	
 else
 	# Load configuration from API (don't stop the script if it fails)
 	load_configuration

@@ -37,3 +37,11 @@ To uninstall the Sentinel Config node, you can execute the script with the `unin
 ```bash
 sudo bash dvpn-node-manager.sh uninstall
 ```
+
+## Show logs
+
+To show the logs of the Sentinel Config node, you can execute the script with the `logs` parameter:
+
+```bash
+sudo bash dvpn-node-manager.sh logs
+```
