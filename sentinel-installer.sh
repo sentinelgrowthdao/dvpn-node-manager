@@ -1336,6 +1336,23 @@ function menu_update()
 # Main function
 ####################################################################################################
 
+
+echo -e "\e[94m"
+echo "  ____             _   _            _ "
+echo " / ___|  ___ _ __ | |_(_)_ __   ___| |"
+echo " \___ \ / _ \ '_ \| __| | '_ \ / _ \ |"
+echo "  ___) |  __/ | | | |_| | | | |  __/ |"
+echo " |____/ \___|_| |_|\__|_|_| |_|\___|_|"
+echo "                                      "
+echo "--------------------------------------"
+echo "           dVPN Node Manager"
+echo "--------------------------------------"
+echo ""
+echo "Welcome to the Sentinel dVPN Node Manager!"
+echo "This tool will assist you in installing, configuring, and managing your dVPN node."
+echo ""
+echo -e "\e[0m"
+
 # Check if the script is executed with sudo permissions
 if [ "$(id -u)" != "0" ]; then
 	echo "This script must be run with sudo permissions"
