@@ -970,7 +970,7 @@ function ask_node_location()
 	elif [ "$NODE_LOCATION" == "residential" ]; then
 		residential_state="ON"
 	fi
-
+	
 	# Ask for node location using whiptail
 	local VALUE=$(whiptail --title "Node Location" --radiolist "Please select the type of validation node you want to run:" 15 78 2 \
 		"datacenter" "Datacenter" $datacenter_state \
@@ -1313,7 +1313,8 @@ function menu_settings()
 						then
 							firewall_configure || return 1;
 							refresh_config_files || return 1;
-							container_restart || return 1;
+							container_remove || return 1;
+							container_start || return 1;
 							# Display message indicating that the settings have been updated
 							whiptail --title "Settings Updated" --msgbox "Network settings have been updated." 8 78
 						fi
