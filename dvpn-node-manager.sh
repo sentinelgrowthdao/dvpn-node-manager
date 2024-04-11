@@ -673,12 +673,12 @@ function wallet_initialization()
 	# Ask if user wants to restore wallet
 	if whiptail --title "Wallet Initialization Confirmation" --yesno "Do you want to restore an existing Sentinel wallet? Please note that this wallet should be dedicated to this node and not used with any other nodes." 8 78
 	then
-		
 		# Ask for mnemonic and store un MNEMONIC variable
 		MNEMONIC=$(whiptail --inputbox "Please enter your wallet's mnemonic:" 8 78 --title "Wallet Mnemonic" 3>&1 1>&2 2>&3) || { output_error "Failed to get mnemonic."; return 1; }
 		
 		# Restore wallet
 		output_info "Restoring wallet, please wait..."
+		
 		echo "$MNEMONIC" | docker run --rm \
 			--interactive \
 			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
@@ -691,8 +691,6 @@ function wallet_initialization()
 					--tty \
 					--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 					${CONTAINER_NAME} process keys add)
-		
-		# output_log "Wallet creation output: ${OUTPUT}"
 		
 		# If the ouput contains "Important" then extract the mnemonic
 		if echo "$OUTPUT" | grep -q "Important"
