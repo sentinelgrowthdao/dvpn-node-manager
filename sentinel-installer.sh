@@ -407,7 +407,7 @@ function install_docker()
 	if command -v docker &> /dev/null
 	then
 		# Check if the user is in the docker group
-		if ! groups | grep -q "\bdocker\b"
+		if ! groups "$SUDO_USER" | grep -q "\bdocker\b"
 		then
 			# Add the current user to the Docker group if not already a member
 			docker_usermod || return 1;
@@ -451,7 +451,8 @@ function install_docker()
 function docker_usermod()
 {
 	# Check if the user is in the docker group
-	if ! groups | grep -q "\bdocker\b"; then
+	if ! groups "$SUDO_USER" | grep -q "\bdocker\b"
+	then
 		# Add the user to the docker group
 		usermod -aG docker ${USER_NAME} || { output_error "Failed to add user to docker group."; return 1; }
 		output_log "User added to docker group."
@@ -1299,6 +1300,16 @@ function menu_node()
 				then
 					remove_config_files
 				fi
+				# Ask user if they want to restart the installation or exit
+				if whiptail --title "Restart Installation" --yesno "Do you want to restart the installation process?" 8 78
+				then
+					# Exit to restart installation
+					return 0
+				else
+					exit 0
+				fi
+				# Exit to restart installation
+				return 0
 				;;
 			*)
 				break
