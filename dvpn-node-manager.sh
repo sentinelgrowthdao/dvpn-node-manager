@@ -68,7 +68,7 @@ function load_config_files()
 	# BACKEND=$(grep "^backend\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	WALLET_NAME=$(grep "^from\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	HANDSHAKE_ENABLE=$(awk 'BEGIN{FS=OFS="="; in_section=0} /^\[handshake\]$/{in_section=1; next} /^\[.*\]$/{if(in_section) in_section=0} in_section && /^enable\s*=\s*(true|false)/{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2; exit}' $CONFIG_FILE)
-
+	
 	# Find out if the node is residential or datacenter
 	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	# if hourly_prices equal to DATACENTER_HOURLY_PRICES
@@ -678,6 +678,9 @@ function wallet_initialization()
 		# Ask for mnemonic and store un MNEMONIC variable
 		MNEMONIC=$(whiptail --inputbox "Please enter your wallet's mnemonic:" 8 78 --title "Wallet Mnemonic" 3>&1 1>&2 2>&3) || { output_error "Failed to get mnemonic."; return 1; }
 		
+		# Remove end of line and spaces at the beginning and end
+		MNEMONIC=$(echo "$MNEMONIC" | tr -d '\r' | xargs)
+		
 		# Restore wallet
 		output_info "Restoring wallet, please wait..."
 		
@@ -1139,44 +1142,55 @@ function menu_installation()
 		generate_certificate || return 1;
 	fi
 	
-	# If Sentinel config does not exist then generate it
+	# Check if the configuration will be created
+	local config_created=false;
+	
+	# If Sentinel config does not exist
+	if [ ! -f "${USER_HOME}/.sentinelnode/config.toml" ]
+	then
+		# Change the value for force question
+		config_created=true;
+	fi
+	
+	# Generate Sentinel configurations
 	generate_sentinel_config || return 1;
-
+	
 	# Load configuration into variables
 	load_config_files || return 1;
+	
 	# Check if the configuration will be changed
-	local config_change=false;
+	local config_changed=false;
 	
 	# If Moniker is empty, ask for Moniker
-	if [ -z "$NODE_MONIKER" ]
+	if [ -z "$NODE_MONIKER" ] || [ $config_created = true ]
 	then
 		ask_moniker || { output_error "Failed to get moniker."; return 1; }
-		config_change=true;
+		config_changed=true;
 	fi
 	
 	# If Node Location is empty, ask for Node Location
-	if [ -z "$NODE_LOCATION" ]
+	if [ -z "$NODE_LOCATION" ] || [ $config_created = true ]
 	then
 		ask_node_location || { output_error "Failed to get validation node type."; return 1; }
-		config_change=true;
+		config_changed=true;
 	fi
 	
 	# If Node Type is empty, ask for Node Type
-	if [ -z "$NODE_TYPE" ]
+	if [ -z "$NODE_TYPE" ] || [ $config_created = true ]
 	then
 		ask_node_type || { output_error "Failed to get node type."; return 1; }
-		config_change=true;
+		config_changed=true;
 	fi
 	
 	# If Remote IP is empty, ask for Remote IP
-	if [ -z "$NODE_IP" ]
+	if [ -z "$NODE_IP" ] || [ $config_created = true ]
 	then
 		ask_remote_ip || { output_error "Failed to get node IP."; return 1; }
-		config_change=true;
+		config_changed=true;
 	fi
 	
 	# If Configuration has changed then refresh configuration files
-	if [ $config_change = true ]
+	if [ $config_changed = true ] || [ $config_created = true ]
 	then
 		# Refresh configuration files
 		refresh_config_files || return 1;
