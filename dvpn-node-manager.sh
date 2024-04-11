@@ -691,12 +691,13 @@ function wallet_exist()
 		--tty \
 		--volume "${USER_HOME}/.sentinelnode:/root/.sentinelnode" \
 		"${CONTAINER_NAME}" process keys list)
-
+	
 	# Use grep to check if the wallet name is in the list
-	if echo "$wallet_list_output" | grep -q "$WALLET_NAME"; then
-		return 0  # Wallet exists
+	if echo "$wallet_list_output" | grep -q "$WALLET_NAME"
+	then
+		return 0
 	else
-		return 1  # Wallet does not exist
+		return 1
 	fi
 }
 
@@ -704,7 +705,7 @@ function wallet_exist()
 function wallet_remove()
 {
 	# If wallet does not exist, return 0
-	if ! wallet_exist
+	if wallet_exist
 	then
 		return 0;
 	fi
@@ -1040,19 +1041,14 @@ function ask_moniker()
 # Function to display a message to wait for funds
 function message_wait_funds()
 {
-	# Get public address
-	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
-	
-	# If public address doesn't start with "sent" then return error
-	if [[ ! ${PUBLIC_ADDRESS} == "sent"* ]]; then
-		output_error "Invalid public address found, please check your wallet configuration."
+	# Display message to wait for funds and allow user to choose to quit or continue
+	if whiptail --title "Funds Required" \
+		--yes-button "Done" --no-button "Quit" \
+		--yesno "Please send at least 50 \$DVPN to the following address before continuing and starting the node:\n\n${PUBLIC_ADDRESS}\n\nPress 'Yes' to wait or 'No' to quit." 10 78; then
+		return 0
+	else
 		return 1
 	fi
-	
-	# Display message to wait for funds
-	whiptail --title "Funds Required" --msgbox "Please send at least 50 \$DVPN to the following address before continuing and starting the node: ${PUBLIC_ADDRESS}" 8 78
-	
-	return 0;
 }
 
 # Function to display a message to inform about Docker installation and reboot requirement
@@ -1088,42 +1084,109 @@ function menu_installation()
 	
 	container_install || return 1;
 	
-	if [ ! -d "${USER_HOME}/.sentinelnode" ]; then
+	# Check if the sentinel node directory exists then create it
+	if [ ! -d "${USER_HOME}/.sentinelnode" ]
+	then
 		mkdir ${USER_HOME}/.sentinelnode || { output_error "Failed to create Sentinel node directory."; return 1; }
 	fi
 	
-	generate_certificate || return 1;
+	# If Certificate does not exist then generate it
+	if [ ! -f "${USER_HOME}/.sentinelnode/cert.pem" ] || [ ! -f "${USER_HOME}/.sentinelnode/key.pem" ]
+	then
+		generate_certificate || return 1;
+	fi
 	
+	# If Sentinel config does not exist then generate it
 	generate_sentinel_config || return 1;
 
+	# Load configuration into variables
 	load_config_files || return 1;
+	# Check if the configuration will be changed
+	local config_change=false;
 	
-	ask_moniker || { output_error "Failed to get moniker."; return 1; }
-	
-	ask_node_location || { output_error "Failed to get validation node type."; return 1; }
-
-	ask_node_type || { output_error "Failed to get node type."; return 1; }
-	
-	ask_remote_ip || { output_error "Failed to get node IP."; return 1; }
-	
-	refresh_config_files || return 1;
-	
-	firewall_configure || return 1;
-	
-	wallet_initialization || return 1;
-	
-	message_wait_funds || return 1;
-	
-	wallet_balance || { output_error "Failed to get wallet balance."; }
-	
-	# If the wallet balance is less than 1 DVPN, display an error message
-	if [ "$WALLET_BALANCE_AMOUNT" -lt 1 ]; then
-		output_error "Insufficient funds. Unable to start the node because the wallet balance is empty (less than 1 DVPN)."
-		return 1
-	else
-		# Start the Sentinel node
-		container_start || return 1;
+	# If Moniker is empty, ask for Moniker
+	if [ -z "$NODE_MONIKER" ]
+	then
+		ask_moniker || { output_error "Failed to get moniker."; return 1; }
+		config_change=true;
 	fi
+	
+	# If Node Location is empty, ask for Node Location
+	if [ -z "$NODE_LOCATION" ]
+	then
+		ask_node_location || { output_error "Failed to get validation node type."; return 1; }
+		config_change=true;
+	fi
+	
+	# If Node Type is empty, ask for Node Type
+	if [ -z "$NODE_TYPE" ]
+	then
+		ask_node_type || { output_error "Failed to get node type."; return 1; }
+		config_change=true;
+	fi
+	
+	# If Remote IP is empty, ask for Remote IP
+	if [ -z "$NODE_IP" ]
+	then
+		ask_remote_ip || { output_error "Failed to get node IP."; return 1; }
+		config_change=true;
+	fi
+	
+	# If Configuration has changed then refresh configuration files
+	if [ $config_change = true ]
+	then
+		# Refresh configuration files
+		refresh_config_files || return 1;
+		# If configuration has changed, ask user to configure the firewall
+		firewall_configure || return 1;
+	fi
+	
+	# Loop to initialize the wallet
+	while true;
+	do
+		# Check if the wallet exists
+		if ! wallet_exist
+		then
+			# Initialize the wallet
+			wallet_initialization || return 1;
+		fi
+		# Get wallet addresses
+		wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
+		
+		# If addresses are not valid, display an error message
+		if [[ ! ${PUBLIC_ADDRESS} == "sent"* ]] || [[ ! ${NODE_ADDRESS} == "sentnode"* ]];
+		then
+			output_error "Invalid addresses found, we will try to reinitialize the wallet."
+			if whiptail --title "Wallet Initialization Issue" \
+				--yes-button "OK" --no-button "Abort" \
+				--yesno "There seems to be an issue with wallet initialization. We will remove the existing wallet and start the initialization process again. Please note that all data associated with the wallet will be permanently lost. You will need to enter the previously saved recovery words again.\n\nDo you want to proceed with wallet removal and re-initialization?" 10 78
+			then
+				wallet_remove || { output_error "Failed to remove wallet. Please do it manually by running the following command: docker run --rm --interactive --tty --volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode ${CONTAINER_NAME} process keys delete $WALLET_NAME"; return 1; }
+			else
+				output_info "Wallet removal aborted. Exiting the script."
+				exit 1
+			fi
+		else
+			break
+		fi
+	done
+	
+	# Loop to wait for funds
+	while true;
+	do
+		# Get wallet balance
+		wallet_balance || { output_error "Failed to get wallet balance."; return 1; }
+		
+		# If the wallet balance is less than 1 DVPN, display a message to wait for funds
+		if [ "$WALLET_BALANCE_AMOUNT" -lt 1 ]; then
+			message_wait_funds || exit 1;
+		else
+			break
+		fi
+	done
+	
+	# Start the Sentinel node
+	container_start || return 1;
 	
 	# If the container is not running, display an error message
 	if ! container_running
@@ -1345,12 +1408,11 @@ echo "  ___) |  __/ | | | |_| | | | |  __/ |"
 echo " |____/ \___|_| |_|\__|_|_| |_|\___|_|"
 echo "                                      "
 echo "--------------------------------------"
-echo "           dVPN Node Manager"
+echo "          dVPN Node Manager"
 echo "--------------------------------------"
 echo ""
 echo "Welcome to the Sentinel dVPN Node Manager!"
 echo "This tool will assist you in installing, configuring, and managing your dVPN node."
-echo ""
 echo -e "\e[0m"
 
 # Check if the script is executed with sudo permissions
