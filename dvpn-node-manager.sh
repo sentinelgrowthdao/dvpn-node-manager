@@ -1408,7 +1408,10 @@ function menu_update()
 # Main function
 ####################################################################################################
 
+# Clear screen
+clear
 
+# Display the welcome message
 echo -e "\e[94m"
 echo "  ____             _   _            _ "
 echo " / ___|  ___ _ __ | |_(_)_ __   ___| |"
