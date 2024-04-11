@@ -118,6 +118,15 @@ function refresh_config_files()
 	# Update V2Ray port
 	sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${CONFIG_V2RAY} || { output_error "Failed to set V2Ray port."; return 1; }
 	
+	# Update Gas parameters
+	sed -i "s/gas = .*/gas = ${GAS}/g" ${CONFIG_FILE} || { output_error "Failed to set gas."; return 1; }
+	
+	# Update Gas adjustment parameters
+	sed -i "s/gas_adjustment = .*/gas_adjustment = ${GAS_ADJUSTMENT}/g" ${CONFIG_FILE} || { output_error "Failed to set gas adjustment."; return 1; }
+	
+	# Update Gas price parameters
+	sed -i "s/gas_price = .*/gas_price = \"${GAS_PRICE}\"/g" ${CONFIG_FILE} || { output_error "Failed to set gas price."; return 1; }
+	
 	if [ "$NODE_LOCATION" == "residential" ]
 	then
 		# Update gigabyte_prices parameter
