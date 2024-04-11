@@ -47,6 +47,7 @@ WALLET_BALANCE_DENOM="DVPN"
 FOXINODES_API_BALANCE="https://wapi.foxinodes.net/api/v1/address/"
 FOXINODES_API_CHECK_IP="https://wapi.foxinodes.net/api/v1/sentinel/check-ip"
 FOXINODES_API_DVPN_CONFIG="https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/configuration"
+FOXINODES_API_CHECK_PORT="https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/check-port/"
 
 ####################################################################################################
 # Configuration functions
@@ -219,7 +220,7 @@ function generate_certificate()
 	# If node country is not set, get public IP
 	if [ "$NODE_COUNTRY" = "NA" ] || [ -z "$NODE_COUNTRY" ];
 	then
-		check_ip || { output_error "Failed to get country of the node."; }
+		network_remote_addr || { output_error "Failed to get country of the node."; }
 	fi
 	
 	
@@ -414,8 +415,13 @@ function os_raspbian()
 	fi
 }
 
+
+####################################################################################################
+# Network functions
+####################################################################################################
+
 # Function to get the public IP address
-function check_ip()
+function network_remote_addr()
 {
 	# Show waiting message
 	output_info "Please wait while the public IP is being retrieved..."
@@ -438,6 +444,42 @@ function check_ip()
 	
 	return 0;
 }
+
+# Function to check if the port is open
+function network_check_port()
+{
+	# Show waiting message
+	output_info "Please wait while the port is being checked..."
+	
+	# Check if the port is open
+	VALUE=$(curl -s ${FOXINODES_API_CHECK_PORT}${NODE_PORT} || echo "")
+	
+	# If VALUE is empty, return 1
+	if [ -z "$VALUE" ]
+	then
+		return 1;
+	fi
+	
+	# Parse the JSON response to extract the values
+	SUCCESS=$(echo "$VALUE" | jq -r '.node.success')
+	
+	# If the success is true, return 1
+	if [ "SUCCESS" != "true" ]
+	then
+		# If message is not empty, display it
+		MESSAGE=$(echo "$VALUE" | jq -r '.message')
+		if [ ! -z "$MESSAGE" ]
+		then
+			output_error "$MESSAGE"
+		else
+			output_error "An error occurred while checking the port."
+		fi
+		return 1;
+	fi
+	
+	return 0;
+}
+
 
 ####################################################################################################
 # Docker functions
@@ -877,7 +919,7 @@ function ask_remote_ip()
 	# If NODE_IP egale to 0.0.0.0 or empty, then retrieve the current public IP
 	if [ "$NODE_IP" = "0.0.0.0" ] || [ -z "$NODE_IP" ];
 	then
-		check_ip || { output_error "Failed to get public IP, please check your network configuration."; return 1; }
+		network_remote_addr || { output_error "Failed to get public IP, please check your network configuration."; return 1; }
 	fi
 	
 	# Ask for remote IP
