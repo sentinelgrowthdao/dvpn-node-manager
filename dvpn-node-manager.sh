@@ -66,7 +66,7 @@ function load_config_files()
 {
 	# Show waiting message
 	output_info "Please wait while the configuration files are being loaded..."
-
+	
 	# Load config files into variables
 	NODE_MONIKER=$(grep "^moniker\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	NODE_TYPE=$(grep "^type\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
@@ -79,7 +79,17 @@ function load_config_files()
 	# RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	# BACKEND=$(grep "^backend\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	WALLET_NAME=$(grep "^from\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	HANDSHAKE_ENABLE=$(awk 'BEGIN{FS=OFS="="; in_section=0} /^\[handshake\]$/{in_section=1; next} /^\[.*\]$/{if(in_section) in_section=0} in_section && /^enable\s*=\s*(true|false)/{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2; exit}' $CONFIG_FILE)
+	
+	# Get handshake enable parameter (check if the section exists and if the parameter exists in the section)
+	HANDSHAKE_ENABLE=$(awk '
+	BEGIN {FS="="; section_found=0}
+	/^\[handshake\]/ {section_found=1; next}
+	/^\[.*\]/ && !/^\[handshake\]/ {section_found=0}
+	section_found && /enable/ {
+		gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2);  # Nettoie les espaces avant et après la valeur
+		print $2;  # Affiche uniquement la valeur
+		exit;
+	}' $CONFIG_FILE)
 	
 	# Find out if the node is residential or datacenter
 	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
