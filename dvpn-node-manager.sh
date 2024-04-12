@@ -928,28 +928,26 @@ function wallet_balance()
 	local API_RESPONSE=$(curl -s "${GROWTHDAO_API_BALANCE}${PUBLIC_ADDRESS}")
 	
 	# Reset values
-	WALLET_BALANCE=""
+	WALLET_BALANCE="0 DVPN"
 	WALLET_BALANCE_AMOUNT=0
 	WALLET_BALANCE_DENOM="DVPN"
 	
 	# If the value is empty, return 1
 	if [ -z "$API_RESPONSE" ]
 	then
+		output_log "API response is empty."
 		return 1;
 	fi
 	
 	# Set the value and extract the amount and denom
 	local DVPN_OBJECT=$(echo "$API_RESPONSE" | jq -r '.balances[] | select(.denom == "udvpn")')
-
-	# If the value is empty, return 1
+	# If the value is not empty then extract the amount
 	if [ -z "$DVPN_OBJECT" ]
 	then
-		return 2;
+		# Set the values
+		WALLET_BALANCE_AMOUNT=$(echo "$DVPN_OBJECT" | jq -r '.amount | tonumber / 1000000')
+		WALLET_BALANCE="${WALLET_BALANCE_AMOUNT} ${WALLET_BALANCE_DENOM}"
 	fi
-
-	# Set the values
-	WALLET_BALANCE_AMOUNT=$(echo "$DVPN_OBJECT" | jq -r '.amount | tonumber / 1000000')
-	WALLET_BALANCE="${WALLET_BALANCE_AMOUNT} ${WALLET_BALANCE_DENOM}"
 	
 	return 0;
 }
