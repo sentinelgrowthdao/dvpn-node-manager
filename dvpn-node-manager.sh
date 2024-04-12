@@ -888,7 +888,7 @@ function wallet_balance()
 function firewall_configure()
 {
 	# Ask if user wants to configure the firewall
-	if ! whiptail --title "Firewall Configuration" --defaultno --yesno "Do you want to configure the firewall to allow incoming connections to the node?\nBecarfule, old rules will not be deleted." 8 78
+	if ! whiptail --title "Firewall Configuration" --yesno "Do you want to configure the firewall to allow incoming connections to the node?\nBecarfule, old rules will not be deleted." 8 78
 	then
 		return 0;
 	fi
