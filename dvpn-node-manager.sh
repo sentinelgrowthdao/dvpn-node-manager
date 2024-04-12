@@ -158,7 +158,7 @@ function refresh_config_files()
 }
 
 # Load configuration from API
-function load_configuration()
+function load_network_configuration()
 {
 	# Show waiting message
 	output_info "Please wait while the configuration is being retrieved..."
@@ -264,7 +264,7 @@ function update_network
 	output_info "Please wait while the Sentinel configuration is being updated..."
 	
 	# Load configuration from API
-	load_configuration || { output_error "Failed to load configuration from API."; return 1; }
+	load_network_configuration || { output_error "Failed to load configuration from API."; return 1; }
 	refresh_config_files || return 1;
 	
 	# Display message indicating that the configuration is up to date
@@ -1342,8 +1342,8 @@ function menu_installation()
 	# If Configuration has changed then refresh configuration files
 	if [ $config_changed = true ] || [ $config_created = true ]
 	then
-		# Load configuration from API (don't stop the script if it fails)
-		load_configuration
+		# Load network configuration from API (don't stop the script if it fails)
+		load_network_configuration
 		# Refresh configuration files
 		refresh_config_files || return 1;
 		# If configuration has changed, ask user to configure the firewall
