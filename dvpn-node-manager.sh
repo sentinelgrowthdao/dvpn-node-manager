@@ -1504,8 +1504,24 @@ function menu_wallet()
 	# Get wallet balance
 	wallet_balance || { output_error "Failed to retrieve wallet balance, API may be down."; return 1; }
 	
+	# Set the width of the dialog box
+	local WIDTH=78
+	local LABEL_PUBLIC_ADDRESS="Public Address:"
+	local LABEL_NODE_ADDRESS="Node Address:"
+	local LABEL_BALANCE="DVPN Balance:"
+	
+	# Calculate space needed to right-align the addresses and balance
+	local PAD_PUBLIC=$(printf '%*s' $((WIDTH - ${#PUBLIC_ADDRESS} - ${#LABEL_PUBLIC_ADDRESS} - 5)) "")
+	local PAD_NODE=$(printf '%*s' $((WIDTH - ${#NODE_ADDRESS} - ${#LABEL_NODE_ADDRESS} - 5)) "")
+	local PAD_BALANCE=$(printf '%*s' $((WIDTH - ${#WALLET_BALANCE} - ${#LABEL_BALANCE} - 5)) "")
+	
+	# Construct the display message
+	local MESSAGE="${LABEL_PUBLIC_ADDRESS}${PAD_PUBLIC}${PUBLIC_ADDRESS}\n"
+	MESSAGE+="${LABEL_NODE_ADDRESS}${PAD_NODE}${NODE_ADDRESS}\n"
+	MESSAGE+="${LABEL_BALANCE}${PAD_BALANCE}${WALLET_BALANCE}"
+	
 	# Display wallet information and prompt for next action
-	whiptail --title "Wallet Information" --msgbox "Public Address: ${PUBLIC_ADDRESS}\nNode Address: ${NODE_ADDRESS}\nDVPN Balance: ${WALLET_BALANCE}" 12 78
+	whiptail --title "Wallet Information" --msgbox "$MESSAGE" 12 $WIDTH
 }
 
 # Function to display the certificate information
