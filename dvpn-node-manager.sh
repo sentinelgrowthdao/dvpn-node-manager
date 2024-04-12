@@ -444,10 +444,10 @@ function certificate_generate()
 	-nodes \
 	-out ${USER_HOME}/.sentinelnode/tls.crt \
 	-subj "/C=${NODE_COUNTRY}/ST=NA/L=./O=NA/OU=./CN=." \
-	-keyout ${USER_HOME}/.sentinelnode/tls.key || { output_error "Failed to generate certificate."; return 1; }
+	-keyout ${USER_HOME}/.sentinelnode/tls.key > /dev/null 2>&1 || { output_error "Failed to generate certificate."; return 1; }
 	
-	chown root:root ${USER_HOME}/.sentinelnode/tls.crt && \
-	chown root:root ${USER_HOME}/.sentinelnode/tls.key || { output_error "Failed to change ownership of certificate files."; return 1; }
+	chown root:root ${USER_HOME}/.sentinelnode/tls.crt > /dev/null 2>&1 && \
+	chown root:root ${USER_HOME}/.sentinelnode/tls.key > /dev/null 2>&1 || { output_error "Failed to change ownership of certificate files."; return 1; }
 	
 	return 0;
 }
