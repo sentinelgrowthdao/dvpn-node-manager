@@ -1358,7 +1358,7 @@ function menu_settings()
 	while true;
 	do
 		CHOICE=$(whiptail --title "Node Settings" --menu "Choose a settings group to configure:" 15 60 5 \
-			"1" "Node Settings" \
+			"1" "Moniker" \
 			"2" "Network Settings" \
 			"3" "VPN Settings" \
 			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3)
