@@ -1391,7 +1391,7 @@ function menu_configuration()
 	# Load wallet addresses
 	wallet_addresses || { output_error "Failed to get public address, wallet seems to be corrupted."; return 1; }
 
-	CHOICE=$(whiptail --title "Welcome to Sentinel Configuration" --menu "Welcome to the Sentinel configuration process. Please select an option:" 15 78 5 \
+	CHOICE=$(whiptail --title "dVPN Node Manager" --menu "Welcome to the Sentinel configuration process. Please select an option:" 15 78 5 \
 		"Settings" "Change node configuration" \
 		"Wallet" "View wallet information" \
 		"Certificate" "View certificate information" \
