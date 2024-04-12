@@ -476,21 +476,28 @@ function network_remote_addr()
 	# Show waiting message
 	output_info "Please wait while the public IP is being retrieved..."
 	# Retrieve the current public IP using wget and sed
-	VALUE=$(curl -s $FOXINODES_API_CHECK_IP || echo "")
+	local VALUE=$(curl -s $FOXINODES_API_CHECK_IP || echo "")
 	
 	# Reset values
 	NODE_IP="0.0.0.0"
 	NODE_COUNTRY="NA"
 	
-	# If VALUE is empty, return 1
+	# If VALUE is empty, try with fallback
 	if [ -z "$VALUE" ]
 	then
-		return 1;
+		# Fallback to checkip.dyndns.org
+		VALUE=$(wget -q -O - checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//')
+		# If IP is not empty
+		if [ ! -z "$VALUE" ]
+		then
+			# Set the IP address
+			NODE_IP=$VALUE
+		fi
+	else
+		# Parse the JSON response to extract the values
+		NODE_IP=$(echo "$VALUE" | jq -r '.ip')
+		NODE_COUNTRY=$(echo "$VALUE" | jq -r '.iso_code')
 	fi
-	
-	# Parse the JSON response to extract the values
-	NODE_IP=$(echo "$VALUE" | jq -r '.ip')
-	NODE_COUNTRY=$(echo "$VALUE" | jq -r '.iso_code')
 	
 	return 0;
 }
