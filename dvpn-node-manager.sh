@@ -40,6 +40,7 @@ RESIDENTIAL_GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FA
 RESIDENTIAL_HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,770ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1871892ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,18897ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,10000000udvpn"
 
 # Dynamic values
+INSTALLATION_CHECKS_ENABLED=true
 PUBLIC_ADDRESS=""
 NODE_ADDRESS=""
 WALLET_BALANCE=""
@@ -279,6 +280,12 @@ function update_network
 # Function to check if all dependencies are installed
 function check_installation()
 {
+	# Check if installation checks are enabled
+	if [ "$INSTALLATION_CHECKS_ENABLED" = false ]
+	then
+		return 0;
+	fi
+	
 	# Show waiting message
 	output_info "Please wait while the installation is being checked..."
 
@@ -1607,6 +1614,8 @@ function menu_actions()
 					# Ask user if they want to restart the installation or exit
 					if whiptail --title "Restart Installation" --yesno "Do you want to restart the installation process?" 8 78
 					then
+						# Set variable to enable installation checks
+						INSTALLATION_CHECKS_ENABLED=true
 						# Exit to restart installation
 						return 0
 					else
@@ -1628,6 +1637,8 @@ function menu_actions()
 					# Ask user if they want to restart the installation or exit
 					if whiptail --title "Restart Installation" --yesno "Do you want to restart the installation process?" 8 78
 					then
+						# Set variable to enable installation checks
+						INSTALLATION_CHECKS_ENABLED=true
 						# Exit to restart installation
 						return 0
 					else
@@ -1770,8 +1781,12 @@ else
 		# Check if installation already exists
 		if check_installation
 		then
+			# Disable installation checks
+			INSTALLATION_CHECKS_ENABLED=false
+			# Display the configuration menu
 			menu_configuration;
 		else
+			# Display the installation menu
 			menu_installation || exit 1;
 		fi
 	done
