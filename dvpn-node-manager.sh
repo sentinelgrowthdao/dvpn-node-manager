@@ -1241,6 +1241,22 @@ function message_docker_reboot_required()
 	fi
 }
 
+# Function to display gigabytes prices
+function message_gigabyte_prices()
+{
+	local GIGABYTE_PRICES=$(grep "^gigabyte_prices\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	# Display message with gigabyte prices
+	whiptail --title "Gigabyte Prices" --msgbox "Prices for one gigabyte of bandwidth provided:\n\n${GIGABYTE_PRICES}" 15 78
+}
+
+# Function to display hourly prices
+function message_hourly_prices()
+{
+	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	# Display message with hourly prices
+	whiptail --title "Hourly Prices" --msgbox "Prices for one hour of bandwidth provided:\n\n${HOURLY_PRICES}" 15 78
+}
+
 ####################################################################################################
 # Menu functions
 ####################################################################################################
@@ -1438,6 +1454,8 @@ function menu_settings()
 			"1" "Moniker" \
 			"2" "Network Settings" \
 			"3" "VPN Settings" \
+			"5" "Gigabyte Prices" \
+			"6" "Hourly Prices" \
 			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3)
 		
 		# If user chooses 'Back', break the loop to return to previous menu
@@ -1491,6 +1509,12 @@ function menu_settings()
 					# Display message indicating that the settings have been updated
 					whiptail --title "Settings Updated" --msgbox "VPN settings have been updated." 8 78
 				fi
+				;;
+			5)
+				message_gigabyte_prices
+				;;
+			6)
+				message_hourly_prices
 				;;
 		esac
 	done
