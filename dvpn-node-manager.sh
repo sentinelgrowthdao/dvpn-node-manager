@@ -281,6 +281,12 @@ function update_container
 # Function to update the Sentinel configuration
 function update_configuration
 {
+	# Ask if user wants to update and overwrite the configuration
+	if ! whiptail --title "Configuration Update" --yesno "Do you want to update and overwrite the Sentinel network configuration?" 8 78
+	then
+		return 0;
+	fi
+	
 	output_info "Please wait while the Sentinel configuration is being updated..."
 	
 	# Load configuration from API
@@ -1261,6 +1267,8 @@ function menu_installation()
 	# If Configuration has changed then refresh configuration files
 	if [ $config_changed = true ] || [ $config_created = true ]
 	then
+		# Load configuration from API (don't stop the script if it fails)
+		load_configuration
 		# Refresh configuration files
 		refresh_config_files || return 1;
 		# If configuration has changed, ask user to configure the firewall
@@ -1642,9 +1650,6 @@ then
 	# Display the container logs
 	container_logs || exit 1;	
 else
-	# Load configuration from API (don't stop the script if it fails)
-	load_configuration
-	
 	while true
 	do
 		# Check if installation already exists
