@@ -279,6 +279,9 @@ function update_configuration
 # Function to check if all dependencies are installed
 function check_installation()
 {
+	# Show waiting message
+	output_info "Please wait while the installation is being checked..."
+
 	# If docker is not installed, return false
 	if ! command -v docker &> /dev/null
 	then
