@@ -251,11 +251,11 @@ function update_container
 	return 0;
 }
 
-# Function to update the Sentinel configuration
-function update_configuration
+# Function to update the Sentinel network configuration
+function update_network
 {
 	# Ask if user wants to update and overwrite the configuration
-	if ! whiptail --title "Configuration Update" --yesno "Do you want to update and overwrite the Sentinel network configuration?" 8 78
+	if ! whiptail --title "Configuration Update" --yesno "Would you like to replace your current Sentinel network configuration with the one currently available?" 8 78
 	then
 		return 0;
 	fi
@@ -1606,7 +1606,7 @@ function menu_update()
 		# Menu pour choisir entre metre à jour le container et la configuration blockchain
 		CHOICE=$(whiptail --title "Update Sentinel Node" --menu "Choose an option:" 15 60 5 \
 			"Container" "Update the Sentinel container" \
-			"Configuration" "Update the Sentinel configuration" \
+			"Network" "Update the Sentinel network configuration" \
 			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3)
 		
 		# If user chooses 'Back', break the loop to return to previous menu
@@ -1619,8 +1619,8 @@ function menu_update()
 			"Container")
 				update_container
 				;;
-			"Configuration")
-				update_configuration
+			"Network")
+				update_network
 				;;
 			
 		esac
