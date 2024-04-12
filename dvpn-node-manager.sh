@@ -1328,7 +1328,7 @@ function menu_configuration()
 	CHOICE=$(whiptail --title "Welcome to Sentinel Configuration" --menu "Welcome to the Sentinel configuration process. Please select an option:" 15 78 5 \
 		"Settings" "Change node configuration" \
 		"Wallet" "View wallet information" \
-		"Node" "Perform node actions" \
+		"Actions" "Perform node actions" \
 		"Update" "Update the node" \
 		--ok-button "Select" --cancel-button "Finish" 3>&1 1>&2 2>&3)
 
@@ -1344,8 +1344,8 @@ function menu_configuration()
 		"Wallet")
 			menu_wallet
 			;;
-		"Node")
-			menu_node
+		"Actions")
+			menu_actions
 			;;
 		"Update")
 			menu_update
@@ -1432,7 +1432,7 @@ function menu_wallet()
 }
 
 # Function to display the node menu
-function menu_node()
+function menu_actions()
 {
 	local CHOICE=""
 	local status_msg=""
