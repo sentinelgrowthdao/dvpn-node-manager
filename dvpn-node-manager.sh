@@ -1582,7 +1582,7 @@ function menu_certificate()
 	certificate_info || { output_error "Failed to get certificate information."; return 1; }
 
 	# Display certificate information
-	whiptail --title "Certificate Information" --msgbox "Certificate Information:\n  - Creation date: ${CERTIFICATE_DATE_CREATION}\n   - Expiration date: ${CERTIFICATE_DATE_EXPIRATION}\n  - Issuer: ${CERTIFICATE_ISSUER}\n  - Subject: ${CERTIFICATE_SUBJECT}" 12 78
+	whiptail --title "Certificate Information" --msgbox "Certificate Information:\n  - Creation date: ${CERTIFICATE_DATE_CREATION}\n  - Expiration date: ${CERTIFICATE_DATE_EXPIRATION}\n  - Issuer: ${CERTIFICATE_ISSUER}\n  - Subject: ${CERTIFICATE_SUBJECT}" 12 78
 }
 
 # Function to display the node menu
