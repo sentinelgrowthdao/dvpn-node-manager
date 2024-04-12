@@ -712,7 +712,7 @@ function container_start()
 function container_stop()
 {
 	output_info "Please wait while the Sentinel container is being stopped..."
-	docker stop ${CONTAINER_NAME} || { output_error "Failed to stop the Sentinel container."; return 1; }
+	docker stop ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to stop the Sentinel container."; return 1; }
 	return 0;
 }
 
@@ -720,7 +720,7 @@ function container_stop()
 function container_restart()
 {
 	output_info "Please wait while the Sentinel container is being restarted..."
-	docker restart ${CONTAINER_NAME} || { output_error "Failed to restart the Sentinel container."; return 1; }
+	docker restart ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to restart the Sentinel container."; return 1; }
 	return 0;
 }
 
