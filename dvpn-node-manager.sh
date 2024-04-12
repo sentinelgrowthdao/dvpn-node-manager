@@ -59,6 +59,9 @@ FOXINODES_API_CHECK_PORT="https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/c
 # Function to load configuration files into variables
 function load_config_files()
 {
+	# Show waiting message
+	output_info "Please wait while the configuration files are being loaded..."
+	
 	# Load config files into variables
 	NODE_MONIKER=$(grep "^moniker\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	NODE_TYPE=$(grep "^type\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
