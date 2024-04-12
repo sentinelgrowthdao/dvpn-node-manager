@@ -836,6 +836,12 @@ function wallet_remove()
 # Function to get the public and node addresses of the wallet
 function wallet_addresses()
 {
+	# If PUBLIC_ADDRESS and NODE_ADDRESS are not empty, return 0
+	if [ ! -z "$PUBLIC_ADDRESS" ] && [ ! -z "$NODE_ADDRESS" ]
+	then
+		return 0;
+	fi
+
 	# Show waiting message
 	output_info "Please wait while the wallet addresses are being retrieved..."
 
@@ -1340,6 +1346,9 @@ function menu_configuration()
 {
 	# Load configuration into variables
 	load_config_files || return 1;
+
+	# Load wallet addresses
+	wallet_addresses || { output_error "Failed to get public address, wallet seems to be corrupted."; return 1; }
 
 	CHOICE=$(whiptail --title "Welcome to Sentinel Configuration" --menu "Welcome to the Sentinel configuration process. Please select an option:" 15 78 5 \
 		"Settings" "Change node configuration" \
