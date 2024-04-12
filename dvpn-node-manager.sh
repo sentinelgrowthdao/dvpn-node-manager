@@ -45,6 +45,10 @@ NODE_ADDRESS=""
 WALLET_BALANCE=""
 WALLET_BALANCE_AMOUNT=0
 WALLET_BALANCE_DENOM="DVPN"
+CERTIFICATE_DATE_CREATION=""
+CERTIFICATE_DATE_EXPIRATION=""
+CERTIFICATE_ISSUER=""
+CERTIFICATE_SUBJECT=""
 
 # API URLs
 GROWTHDAO_API_BALANCE="https://api.sentinelgrowthdao.com/cosmos/bank/v1beta1/balances/"
@@ -61,7 +65,7 @@ function load_config_files()
 {
 	# Show waiting message
 	output_info "Please wait while the configuration files are being loaded..."
-	
+
 	# Load config files into variables
 	NODE_MONIKER=$(grep "^moniker\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	NODE_TYPE=$(grep "^type\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
@@ -210,40 +214,6 @@ function generate_sentinel_config()
 			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
 			${CONTAINER_NAME} process v2ray config init || { output_error "Failed to generate V2Ray configuration."; return 1; }
 	fi
-	
-	return 0;
-}
-
-# Function to configure network settings
-function generate_certificate()
-{
-	# If certificate already exists, return zero
-	if [ -f "${USER_HOME}/.sentinelnode/tls.crt" ] && [ -f "${USER_HOME}/.sentinelnode/tls.key" ]
-	then
-		return 0
-	fi
-	
-	# If node country is not set, get public IP
-	if [ "$NODE_COUNTRY" = "NA" ] || [ -z "$NODE_COUNTRY" ];
-	then
-		network_remote_addr || { output_error "Failed to get country of the node."; }
-	fi
-	
-	
-	# Generate certificate
-	openssl req -new \
-	-newkey ec \
-	-pkeyopt ec_paramgen_curve:prime256v1 \
-	-x509 \
-	-sha256 \
-	-days 365 \
-	-nodes \
-	-out ${USER_HOME}/.sentinelnode/tls.crt \
-	-subj "/C=${NODE_COUNTRY}/ST=NA/L=./O=NA/OU=./CN=." \
-	-keyout ${USER_HOME}/.sentinelnode/tls.key || { output_error "Failed to generate certificate."; return 1; }
-	
-	chown root:root ${USER_HOME}/.sentinelnode/tls.crt && \
-	chown root:root ${USER_HOME}/.sentinelnode/tls.key || { output_error "Failed to change ownership of certificate files."; return 1; }
 	
 	return 0;
 }
@@ -427,6 +397,71 @@ function os_raspbian()
 	fi
 }
 
+
+####################################################################################################
+# Certificate functions
+####################################################################################################
+
+# Function to configure network settings
+function certificate_generate()
+{
+	# If certificate already exists, return zero
+	if [ -f "${USER_HOME}/.sentinelnode/tls.crt" ] && [ -f "${USER_HOME}/.sentinelnode/tls.key" ]
+	then
+		return 0
+	fi
+	
+	# If node country is not set, get public IP
+	if [ "$NODE_COUNTRY" = "NA" ] || [ -z "$NODE_COUNTRY" ];
+	then
+		network_remote_addr || { output_error "Failed to get country of the node."; }
+	fi
+	
+	
+	# Generate certificate
+	openssl req -new \
+	-newkey ec \
+	-pkeyopt ec_paramgen_curve:prime256v1 \
+	-x509 \
+	-sha256 \
+	-days 365 \
+	-nodes \
+	-out ${USER_HOME}/.sentinelnode/tls.crt \
+	-subj "/C=${NODE_COUNTRY}/ST=NA/L=./O=NA/OU=./CN=." \
+	-keyout ${USER_HOME}/.sentinelnode/tls.key || { output_error "Failed to generate certificate."; return 1; }
+	
+	chown root:root ${USER_HOME}/.sentinelnode/tls.crt && \
+	chown root:root ${USER_HOME}/.sentinelnode/tls.key || { output_error "Failed to change ownership of certificate files."; return 1; }
+	
+	return 0;
+}
+
+# Function to check if the certificate exists
+function certificate_info()
+{
+	# Check if certificate files exist
+	if [ ! -f "${USER_HOME}/.sentinelnode/tls.crt" ] || [ ! -f "${USER_HOME}/.sentinelnode/tls.key" ]
+	then
+		output_info "Certificate or key file not found."
+		return 1
+	fi
+	
+	# Read certificate information
+	local CERTIFICATE=$(openssl x509 -in "${USER_HOME}/.sentinelnode/tls.crt" -text)
+	if [ -z "$CERTIFICATE" ]
+	then
+		output_info "Failed to read certificate."
+		return 1
+	fi
+	
+	# Parse the certificate information
+	CERTIFICATE_DATE_CREATION=$(echo "$CERTIFICATE" | grep -E "Not Before *:" | cut -d : -f 2- | sed 's/^ *//;s/ *$//')
+	CERTIFICATE_DATE_EXPIRATION=$(echo "$CERTIFICATE" | grep -E "Not After *:" | cut -d : -f 2- | sed 's/^ *//;s/ *$//')
+	CERTIFICATE_ISSUER=$(echo "$CERTIFICATE" | grep "Issuer:" | cut -d : -f 2- | sed 's/^ *//;s/ *$//;s/ *//g')
+	CERTIFICATE_SUBJECT=$(echo "$CERTIFICATE" | grep "Subject:" | cut -d : -f 2- | sed 's/^ *//;s/ *$//;s/ *//g')
+
+	return 0
+}
 
 ####################################################################################################
 # Network functions
@@ -1223,7 +1258,7 @@ function menu_installation()
 	# If Certificate does not exist then generate it
 	if [ ! -f "${USER_HOME}/.sentinelnode/cert.pem" ] || [ ! -f "${USER_HOME}/.sentinelnode/key.pem" ]
 	then
-		generate_certificate || return 1;
+		certificate_generate || return 1;
 	fi
 	
 	# Check if the configuration will be created
@@ -1356,6 +1391,7 @@ function menu_configuration()
 	CHOICE=$(whiptail --title "Welcome to Sentinel Configuration" --menu "Welcome to the Sentinel configuration process. Please select an option:" 15 78 5 \
 		"Settings" "Change node configuration" \
 		"Wallet" "View wallet information" \
+		"Certificate" "View certificate information" \
 		"Actions" "Perform node actions" \
 		"Update" "Update the node" \
 		--ok-button "Select" --cancel-button "Finish" 3>&1 1>&2 2>&3)
@@ -1371,6 +1407,9 @@ function menu_configuration()
 			;;
 		"Wallet")
 			menu_wallet
+			;;
+		"Certificate")
+			menu_certificate
 			;;
 		"Actions")
 			menu_actions
@@ -1457,6 +1496,16 @@ function menu_wallet()
 	
 	# Display wallet information and prompt for next action
 	whiptail --title "Wallet Information" --msgbox "Public Address: ${PUBLIC_ADDRESS}\nNode Address: ${NODE_ADDRESS}\nDVPN Balance: ${WALLET_BALANCE}" 12 78
+}
+
+# Function to display the certificate information
+function menu_certificate()
+{
+	# Display certificate information
+	certificate_info || { output_error "Failed to get certificate information."; return 1; }
+
+	# Display certificate information
+	whiptail --title "Certificate Information" --msgbox "Certificate Information:\n  - Creation date: ${CERTIFICATE_DATE_CREATION}\n   - Expiration date: ${CERTIFICATE_DATE_EXPIRATION}\n  - Issuer: ${CERTIFICATE_ISSUER}\n  - Subject: ${CERTIFICATE_SUBJECT}" 12 78
 }
 
 # Function to display the node menu
