@@ -192,6 +192,8 @@ function generate_sentinel_config()
 	# If sentinel config not generated
 	if [ ! -f "${USER_HOME}/.sentinelnode/config.toml" ]
 	then
+		# Show waiting message
+		output_info "Please wait while the Sentinel configuration is being generated..."
 		# Generate Sentinel config
 		docker run --rm \
 			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
@@ -201,6 +203,8 @@ function generate_sentinel_config()
 	# If wireguard config not generated
 	if [ ! -f "${USER_HOME}/.sentinelnode/wireguard.toml" ]
 	then
+		# Show waiting message
+		output_info "Please wait while the WireGuard configuration is being generated..."
 		# Generate WireGuard config
 		docker run --rm \
 			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
@@ -210,6 +214,8 @@ function generate_sentinel_config()
 	# If v2ray config not generated
 	if [ ! -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
 	then
+		# Show waiting message
+		output_info "Please wait while the V2Ray configuration is being generated..."
 		# Generate V2Ray config
 		docker run --rm \
 			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
