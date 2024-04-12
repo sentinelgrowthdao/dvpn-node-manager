@@ -1392,8 +1392,9 @@ function menu_installation()
 		# Get wallet balance
 		wallet_balance || { output_error "Failed to get wallet balance."; return 1; }
 		
-		# If the wallet balance is less than 1 DVPN, display a message to wait for funds
-		if [ "${WALLET_BALANCE_AMOUNT%.*}" -lt 1 ]; then
+		# If the wallet balance is empty or less than 1 DVPN, display a message to wait for funds
+		if [ -z "$WALLET_BALANCE_AMOUNT" ] || [ "${WALLET_BALANCE_AMOUNT%.*}" -lt 1 ]
+		then
 			message_wait_funds || exit 1;
 		else
 			break
