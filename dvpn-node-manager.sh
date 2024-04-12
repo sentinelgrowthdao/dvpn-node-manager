@@ -47,7 +47,7 @@ WALLET_BALANCE_AMOUNT=0
 WALLET_BALANCE_DENOM="DVPN"
 
 # API URLs
-FOXINODES_API_BALANCE="https://wapi.foxinodes.net/api/v1/address/"
+GROWTHDAO_API_BALANCE="https://api.sentinelgrowthdao.com/cosmos/bank/v1beta1/balances/"
 FOXINODES_API_CHECK_IP="https://wapi.foxinodes.net/api/v1/sentinel/check-ip"
 FOXINODES_API_DVPN_CONFIG="https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/configuration"
 FOXINODES_API_CHECK_PORT="https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/check-port/"
@@ -858,7 +858,7 @@ function wallet_balance()
 	output_info "Please wait while the wallet balance is being retrieved..."
 	
 	# Get wallet balance from remote API
-	local VALUE=$(curl -s ${FOXINODES_API_BALANCE}${PUBLIC_ADDRESS} | jq -r '.addresses[0].available')
+	local API_RESPONSE=$(curl -s "${GROWTHDAO_API_BALANCE}${PUBLIC_ADDRESS}")
 	
 	# Reset values
 	WALLET_BALANCE=""
@@ -866,15 +866,23 @@ function wallet_balance()
 	WALLET_BALANCE_DENOM="DVPN"
 	
 	# If the value is empty, return 1
-	if [ -z "$VALUE" ]
+	if [ -z "$API_RESPONSE" ]
 	then
 		return 1;
 	fi
 	
 	# Set the value and extract the amount and denom
-	WALLET_BALANCE=$(echo "$VALUE" | tr -d '\n')
-	WALLET_BALANCE_AMOUNT=$(echo "$WALLET_BALANCE" | sed -E 's/([^0-9]*)([0-9]+)(.*)/\2/')
-	WALLET_BALANCE_DENOM=$(echo "$WALLET_BALANCE" | sed -E 's/[^a-zA-Z]+//g')
+	local DVPN_OBJECT=$(echo "$API_RESPONSE" | jq -r '.balances[] | select(.denom == "udvpn")')
+
+	# If the value is empty, return 1
+	if [ -z "$DVPN_OBJECT" ]
+	then
+		return 2;
+	fi
+
+	# Set the values
+	WALLET_BALANCE_AMOUNT=$(echo "$DVPN_OBJECT" | jq -r '.amount | tonumber / 1000000')
+	WALLET_BALANCE="${WALLET_BALANCE_AMOUNT} ${WALLET_BALANCE_DENOM}"
 	
 	return 0;
 }
