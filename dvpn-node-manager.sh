@@ -1110,8 +1110,8 @@ function ask_node_location()
 	
 	# Ask for node location using whiptail
 	local VALUE=$(whiptail --title "Node Location" --radiolist "Please select the type of validation node you want to run:" 15 78 2 \
-		"datacenter" "Datacenter" $datacenter_state \
-		"residential" "Residential" $residential_state 3>&1 1>&2 2>&3) || return 1;
+		"datacenter" "Your node is physically located in a datacenter" $datacenter_state \
+		"residential" "Your node is physically in a house" $residential_state 3>&1 1>&2 2>&3) || return 1;
 	
 	# Check if the user pressed Cancel
 	if [ $? -ne 0 ]; then
