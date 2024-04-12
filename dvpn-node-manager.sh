@@ -1304,7 +1304,7 @@ function menu_installation()
 		wallet_balance || { output_error "Failed to get wallet balance."; return 1; }
 		
 		# If the wallet balance is less than 1 DVPN, display a message to wait for funds
-		if [ "$WALLET_BALANCE_AMOUNT" -lt 1 ]; then
+		if [ "${WALLET_BALANCE_AMOUNT%.*}" -lt 1 ]; then
 			message_wait_funds || exit 1;
 		else
 			break
@@ -1450,20 +1450,22 @@ function menu_actions()
 		# Check if the container is running
 		if container_running
 		then
-			status_msg="Node Status: Running"
-			CHOICE=$(whiptail --title "Sentinel Node Menu" \
+			status_msg="dVPN node Status: Running"
+			CHOICE=$(whiptail --title "Actions" \
 				--yes-button "Select" --no-button "Back" \
-				--menu "$status_msg\nChoose an option:" 15 78 4 \
-				"Restart" "Sentinel Node" \
-				"Stop" "Sentinel Node" \
-				"Remove" "Sentinel Node and Wallet" 3>&1 1>&2 2>&3)
+				--menu "$status_msg\n\nChoose an option:" 15 78 4 \
+				"Restart" "dVPN Node" \
+				"Stop" "dVPN Node" \
+				"Remove" "Only remove the dVPN Node container" \
+				"Wipe" "Node container, wallet, and configuration folder" 3>&1 1>&2 2>&3)
 		else
-			status_msg="Node Status: Stopped"
-			CHOICE=$(whiptail --title "Sentinel Node Menu" \
+			status_msg="dVPN node Status: Stopped"
+			CHOICE=$(whiptail --title "Actions" \
 				--yes-button "Select" --no-button "Back" \
 				--menu "$status_msg\nChoose an option:" 15 78 3 \
-				"Start" "Sentinel Node" \
-				"Remove" "Sentinel Node and Wallet" 3>&1 1>&2 2>&3)
+				"Start" "dVPN Node" \
+				"Remove" "Only remove the dVPN Node container" \
+				"Wipe" "Node container, wallet, and configuration folder" 3>&1 1>&2 2>&3)
 		fi
 
 		# Handle selected option
@@ -1478,28 +1480,44 @@ function menu_actions()
 				container_start
 				;;
 			"Remove")
-				if whiptail --title "Confirm Container Removal" --defaultno --yesno "Are you sure you want to remove the dvpn node container?" 8 78
+				if whiptail --title "Confirm Container Removal" --defaultno --yesno "Are you sure you want to remove the dVPN node container?" 8 78
 				then
+					# Remove the container
 					container_remove
-				fi
-				if whiptail --title "Confirm Wallet Removal" --defaultno --yesno "Are you sure you want to remove the wallet?" 8 78
-				then
-					wallet_remove
-				fi
-				if whiptail --title "Confirm Configuration Removal" --defaultno --yesno "Are you sure you want to remove the configuration files?" 8 78
-				then
-					remove_config_files
-				fi
-				# Ask user if they want to restart the installation or exit
-				if whiptail --title "Restart Installation" --yesno "Do you want to restart the installation process?" 8 78
-				then
+
+					# Ask user if they want to restart the installation or exit
+					if whiptail --title "Restart Installation" --yesno "Do you want to restart the installation process?" 8 78
+					then
+						# Exit to restart installation
+						return 0
+					else
+						exit 0
+					fi
+
 					# Exit to restart installation
 					return 0
-				else
-					exit 0
 				fi
-				# Exit to restart installation
-				return 0
+				;;
+			"Wipe")
+				if whiptail --title "Confirm Container Removal" --defaultno --yesno "Are you sure you want to completely remove the dVPN node container, wallet, and configuration folder?" 8 78
+				then
+					# Remove the container, wallet, and configuration folder
+					container_remove
+					wallet_remove
+					remove_config_files
+
+					# Ask user if they want to restart the installation or exit
+					if whiptail --title "Restart Installation" --yesno "Do you want to restart the installation process?" 8 78
+					then
+						# Exit to restart installation
+						return 0
+					else
+						exit 0
+					fi
+
+					# Exit to restart installation
+					return 0
+				fi
 				;;
 			*)
 				break
