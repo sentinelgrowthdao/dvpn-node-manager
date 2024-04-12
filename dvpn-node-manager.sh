@@ -93,14 +93,19 @@ function load_config_files()
 	
 	# Find out if the node is residential or datacenter
 	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	# if hourly_prices equal to DATACENTER_HOURLY_PRICES
+	
+	# If hourly_prices equal to DATACENTER_HOURLY_PRICES
 	if [ "$HOURLY_PRICES" == "$DATACENTER_HOURLY_PRICES" ]
 	then
 		NODE_LOCATION="datacenter"
-	else
+	# If hourly_prices is not empty
+	elif [ ! -z "$HOURLY_PRICES" ]
+	then
 		NODE_LOCATION="residential"
+	else
+		NODE_LOCATION=""
 	fi
-
+	
 	return 0;
 }
 
