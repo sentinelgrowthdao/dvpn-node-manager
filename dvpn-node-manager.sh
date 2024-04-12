@@ -161,7 +161,7 @@ function refresh_config_files()
 function load_network_configuration()
 {
 	# Show waiting message
-	output_info "Please wait while the configuration is being retrieved..."
+	output_info "Please wait while the network configuration is being retrieved..."
 	
 	# Retrieve configuration from API
 	local CONFIG=$(curl -s ${FOXINODES_API_DVPN_CONFIG})
