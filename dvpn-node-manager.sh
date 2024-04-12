@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Installer version
-VERSION="alpha-0.1.0"
+SCRIPT_VERSION="alpha-0.1.0"
 
 # User and home directory
 USER_NAME=${SUDO_USER:-$(whoami)}
@@ -1643,14 +1643,18 @@ echo " / ___|  ___ _ __ | |_(_)_ __   ___| |"
 echo " \___ \ / _ \ '_ \| __| | '_ \ / _ \ |"
 echo "  ___) |  __/ | | | |_| | | | |  __/ |"
 echo " |____/ \___|_| |_|\__|_|_| |_|\___|_|"
-echo "                                      "
+echo -e "\e[0m"
 echo "--------------------------------------"
 echo "          dVPN Node Manager"
 echo "--------------------------------------"
 echo ""
 echo "Welcome to the Sentinel dVPN Node Manager!"
 echo "This tool will assist you in installing, configuring, and managing your dVPN node."
-echo -e "\e[0m"
+echo "Operating System: $(uname -o)"
+echo "Kernel Version: $(uname -r)"
+echo "Architecture: $(uname -m)"
+echo "Script version: ${SCRIPT_VERSION}"
+echo -e ""
 
 # Check if the script is executed with sudo permissions
 if [ "$(id -u)" != "0" ]; then
@@ -1712,7 +1716,7 @@ then
 		exit 1
 	fi
 	# Display the container logs
-	container_logs || exit 1;	
+	container_logs || exit 1;
 else
 	while true
 	do
