@@ -341,17 +341,18 @@ function remove_config_files()
 # Update functions
 ####################################################################################################
 
-# Function to update the Sentinel container
+# Function to update the container
 function update_container
 {
-	output_info "Please wait while the Sentinel container is being updated..."
+	output_info "Please wait while the dVPN node container is being updated..."
 	
 	container_remove || return 1;
 	container_install || return 1;
 	container_start || return 1;
 	
 	# Display message indicating that the image is up to date
-	whiptail --title "Update Complete" --msgbox "Sentinel image is up to date." 8 78
+	output_info "The dVPN node container has been updated."
+	whiptail --title "Update Complete" --msgbox "dVPN node container is up to date." 8 78
 	
 	return 0;
 }
@@ -438,7 +439,7 @@ function check_installation()
 	# If container is not initialized, return false
 	if ! docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
 	then
-		output_log "Sentinel container is not initialized."
+		output_log "dVPN node container is not initialized."
 		return 1
 	fi
 	
@@ -795,7 +796,7 @@ function container_install()
 function container_start()
 {
 	# Show waiting message
-	output_info "Please wait while the Sentinel container is being started..."
+	output_info "Please wait while the dVPN node container is being started..."
 	
 	# If container is already created, check if it is running
 	if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
@@ -803,7 +804,7 @@ function container_start()
 		# Check if the container is not running
 		if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
 			# Container is not running, attempt to start it
-			docker start ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to start the Sentinel container."; return 1; }
+			docker start ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to start the dVPN node container."; return 1; }
 		fi
 		return 0
 	fi
@@ -850,16 +851,16 @@ function container_start()
 # Function to stop the Docker container
 function container_stop()
 {
-	output_info "Please wait while the Sentinel container is being stopped..."
-	docker stop ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to stop the Sentinel container."; return 1; }
+	output_info "Please wait while the dVPN node container is being stopped..."
+	docker stop ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to stop the dVPN node container."; return 1; }
 	return 0;
 }
 
 # Function to restart the Docker container
 function container_restart()
 {
-	output_info "Please wait while the Sentinel container is being restarted..."
-	docker restart ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to restart the Sentinel container."; return 1; }
+	output_info "Please wait while the dVPN node container is being restarted..."
+	docker restart ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to restart the dVPN node container."; return 1; }
 	return 0;
 }
 
@@ -887,8 +888,8 @@ function container_remove()
 	container_stop
 	
 	# Remove the container
-	output_info "Please wait while the Sentinel container is being removed..."
-	docker rm --force ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to remove the Sentinel container."; return 1; }
+	output_info "Please wait while the dVPN node container is being removed..."
+	docker rm --force ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to remove the dVPN node container."; return 1; }
 	
 	return 0;
 }
@@ -897,14 +898,14 @@ function container_remove()
 function container_logs()
 {
 	# Show waiting message
-	output_info "Please wait while the Sentinel container logs are being retrieved..."
-	# Display message indicating that the Sentinel container logs are being retrieved
+	output_info "Please wait while the dVPN node container logs are being retrieved..."
+	# Display message indicating that the container logs are being retrieved
 	output_info "Press 'Ctrl + C' to exit the logs."
 	
 	# Wait for 2 seconds
 	sleep 2
 	# Retrieve the container logs
-	docker logs -f -n 100 ${CONTAINER_NAME} || { output_error "Failed to retrieve the Sentinel container logs."; return 1; }
+	docker logs -f -n 100 ${CONTAINER_NAME} || { output_error "Failed to retrieve the dVPN node container logs."; return 1; }
 	
 	return 0;
 }
@@ -1931,8 +1932,8 @@ function menu_update()
 	do
 		# Menu pour choisir entre metre à jour le container et la configuration blockchain
 		CHOICE=$(whiptail --title "Update Sentinel Node" --menu "Choose an option:" 15 60 5 \
-			"Container" "Update the Sentinel container" \
-			"Network" "Update the Sentinel network configuration" \
+			"Container" "Update the dVPN node container" \
+			"Network" "Update the dVPN node network configuration" \
 			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3)
 		
 		# If user chooses 'Back', break the loop to return to previous menu
@@ -2055,10 +2056,10 @@ then
 	exit 0
 elif [ "$1" == "log" ] || [ "$1" == "logs" ]
 then
-	# Check if the Sentinel container is running
+	# Check if the container is running
 	if ! container_running
 	then
-		output_error "The Sentinel container is not running."
+		output_error "The dVPN node container is not running."
 		exit 1
 	fi
 	# Display the container logs
