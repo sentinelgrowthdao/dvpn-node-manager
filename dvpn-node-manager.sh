@@ -19,7 +19,6 @@ CONFIG_TLS_KEY="${CONFIG_DIR}/tls.key"
 
 # Configuration variables
 CONTAINER_NAME="sentinel-dvpn-node"
-OUTPUT_DEBUG=true
 FIREWALL="ufw"
 NODE_MONIKER=""
 NODE_TYPE="wireguard"
