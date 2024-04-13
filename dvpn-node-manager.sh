@@ -1529,7 +1529,7 @@ function menu_installation()
 	# If the container is not running, display an error message
 	if ! container_running
 	then
-		output_error "Failed to start the Sentinel node."
+		output_error "Failed to start the dVPN node container."
 		return 1
 	else
 		# Display message indicating that the node has been successfully installed and started
