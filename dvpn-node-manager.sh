@@ -1137,6 +1137,20 @@ function firewall_configure()
 		# Install UFW
 		output_info "Installing UFW, please wait..."
 		apt install -y ufw || { output_error "Failed to install UFW."; return 1; }
+		
+		# Find SSH Port
+		local SSH_PORT=$(sudo ss -plntu | grep sshd | awk '{print $5}' | sed -E 's/.*:(.*)/\1/' | uniq)
+		# If SSH port is empty
+		if [ -z "$SSH_PORT" ]
+		then
+			SSH_PORT=22
+		fi
+		# Allow SSH port
+		if ! ufw status | grep -q "${SSH_PORT}/tcp"
+		then
+			output_info "Allowing SSH port ${SSH_PORT} in UFW"
+			ufw allow ${SSH_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow SSH port."; return 1; }
+		fi
 	fi
 	
 	# Enable UFW
