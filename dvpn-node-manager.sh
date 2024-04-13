@@ -629,6 +629,13 @@ function network_remote_addr()
 # Function to check if the port is open
 function network_check_port()
 {
+	# If node address is empty, return error
+	if [ -z "$NODE_ADDRESS" ]
+	then
+		output_error "Node address is empty, please check your wallet configuration before proceeding."
+		return 1
+	fi
+	
 	# Show waiting message
 	output_info "Please wait while $NODE_PORT is checked to open on $NODE_IP...".
 	
