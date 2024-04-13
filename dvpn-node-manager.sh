@@ -910,8 +910,16 @@ function wallet_initialization()
 		--defaultno --yesno \
 		"Do you want to restore an existing Sentinel wallet? Please note that this wallet should be dedicated to this node and not used with any other nodes." 8 78
 	then
-		# Ask for mnemonic and store un MNEMONIC variable
-		MNEMONIC=$(whiptail --inputbox "Please enter your wallet's mnemonic:" 8 78 --title "Wallet Mnemonic" 3>&1 1>&2 2>&3) || { output_error "Failed to get mnemonic."; return 1; }
+		while true
+		do
+			# Ask for mnemonic and store un MNEMONIC variable
+			MNEMONIC=$(whiptail --inputbox "Please enter your wallet's mnemonic:" 8 78 --title "Wallet Mnemonic" 3>&1 1>&2 2>&3) || { output_error "Failed to get mnemonic."; return 1; }
+			# If mnemonic is not empty, break loop
+			if [ ! -z "$MNEMONIC" ]
+			then
+				break
+			fi
+		done
 		
 		# Remove end of line and spaces at the beginning and end
 		MNEMONIC=$(echo "$MNEMONIC" | tr -d '\r' | xargs)
