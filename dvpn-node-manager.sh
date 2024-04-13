@@ -156,6 +156,7 @@ function refresh_config_files()
 	# Update Gas price parameters
 	sed -i "s/gas_price = .*/gas_price = \"${GAS_PRICE}\"/g" ${CONFIG_FILE} || { output_error "Failed to set gas price."; return 1; }
 	
+	# Update prices parameters
 	if [ "$NODE_LOCATION" == "residential" ]
 	then
 		# Update gigabyte_prices parameter
