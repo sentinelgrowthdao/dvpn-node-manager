@@ -2096,7 +2096,7 @@ function menu_about()
 	Architecture: $(uname -m)
 	Installer Version: ${INSTALLER_VERSION}
 	Node Version: ${NODE_VERSION}
-	Docs URL: ${DOCS_URL}" 15 60
+	Sentinel Docs: ${DOCS_URL}" 15 60
 
 	return 0;
 }
