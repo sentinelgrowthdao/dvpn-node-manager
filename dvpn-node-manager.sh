@@ -1400,6 +1400,28 @@ function message_hourly_prices()
 	whiptail --title "Hourly Prices" --msgbox "Prices for one hour of bandwidth provided:\n\n${HOURLY_PRICES}" 15 78
 }
 
+# Function to display port forwarding configuration message
+function message_port_forwarding()
+{
+	local MESSAGE="Please ensure the following ports are forwarded in your router settings to allow external access to your node:\n\n"
+	MESSAGE+="   - Node Port: ${NODE_PORT}/tcp\n"
+	
+	if [ "$NODE_TYPE" == "wireguard" ]
+	then
+		MESSAGE+="   - WireGuard Port: ${WIREGUARD_PORT}/udp\n"
+	elif [ "$NODE_TYPE" == "v2ray" ]
+	then
+		MESSAGE+="   - V2Ray Port: ${V2RAY_PORT}/tcp\n"
+	fi
+	
+	MESSAGE+="\nIt is essential that you complete this step to ensure that your node works properly and is accessible from the Internet.\n\n"
+	MESSAGE+="For detailed instructions on configuring port forwarding, please consult our documentation at: https://docs.sentinel.co/\n\n\n"
+	MESSAGE+="Press 'Continue' to test your port forwarding configuration."
+	
+	# Display the message using whiptail
+	whiptail --title "Port Forwarding Required" --ok-button "Continue" --msgbox "$MESSAGE" 21 78
+}
+
 ####################################################################################################
 # Menu functions
 ####################################################################################################
@@ -1548,6 +1570,9 @@ function menu_installation()
 		output_error "Failed to start the dVPN node container."
 		return 1
 	fi
+	
+	# Show message to inform about port forwarding
+	message_port_forwarding
 	
 	# Check if the node is accessible from the Internet
 	network_check_port || return 1;
