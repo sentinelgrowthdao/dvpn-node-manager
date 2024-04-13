@@ -111,18 +111,42 @@ function load_config_files()
 	fi
 	
 	# If node type is wireguard and wireguard config exists
-	if [ "$NODE_TYPE" == "wireguard" ] && [ -f "${CONFIG_WIREGUARD}" ]
+	if [ "$NODE_TYPE" == "wireguard" ]
+	then
+		load_wireguard_config
+		# Duplicate the value to V2RAY_PORT
+		V2RAY_PORT=$WIREGUARD_PORT
+	elif [ "$NODE_TYPE" == "v2ray" ]
+	then
+		load_v2ray_config
+		# Duplicate the value to WIREGUARD_PORT
+		WIREGUARD_PORT=$V2RAY_PORT
+	fi
+	
+	return 0;
+}
+
+# Function to load wireguard configuration
+function load_wireguard_config()
+{
+	# If wireguard config exists
+	if [ -f "${CONFIG_WIREGUARD}" ]
 	then
 		# Load from WireGuard configuration
 		WIREGUARD_PORT=$(grep "^listen_port\s*=" "${CONFIG_WIREGUARD}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-		# Duplicate the value to V2RAY_PORT
-		V2RAY_PORT=$WIREGUARD_PORT
-	elif [ "$NODE_TYPE" == "v2ray" ] && [ -f "${CONFIG_V2RAY}" ]
+	fi
+	
+	return 0;
+}
+
+# Function to load v2ray configuration
+function load_v2ray_config()
+{
+	# If v2ray config exists
+	if [ -f "${CONFIG_V2RAY}" ]
 	then
 		# Load from V2Ray configuration
 		V2RAY_PORT=$(grep "^listen_port\s*=" "${CONFIG_V2RAY}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-		# Duplicate the value to WIREGUARD_PORT
-		WIREGUARD_PORT=$V2RAY_PORT
 	fi
 	
 	return 0;
@@ -1515,8 +1539,17 @@ function menu_installation()
 	then
 		ask_node_type || { output_error "Failed to get node type."; return 1; }
 		config_changed=true;
+		
 		# Generate WireGuard or V2Ray configurations
 		generate_vpn_config || { output_error "Failed to generate vpn configuration."; return 1; }
+		# Load random port for WireGuard or V2Ray
+		if [ "$NODE_TYPE" == "wireguard" ]
+		then
+			load_wireguard_config
+		elif [ "$NODE_TYPE" == "v2ray" ]
+		then
+			load_v2ray_config
+		fi
 	fi
 	
 	# If Remote IP is empty, ask for Remote IP
