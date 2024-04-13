@@ -2101,6 +2101,9 @@ then
 elif [ "$1" == "update" ]
 then
 	update_container || exit 1;
+elif [ "$1" == "about" ]
+then
+	menu_about || exit 1;
 else
 	while true
 	do
