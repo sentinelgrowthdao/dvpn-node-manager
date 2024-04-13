@@ -610,32 +610,47 @@ function network_remote_addr()
 function network_check_port()
 {
 	# Show waiting message
-	output_info "Please wait while the port is being checked..."
+	output_info "Please wait while $NODE_PORT is checked to open on $NODE_IP...".
 	
-	# Check if the port is open
-	VALUE=$(curl -s ${FOXINODES_API_CHECK_PORT}${NODE_PORT} || echo "")
+	# Request GET to Foxinodes API
+	local RESPONSE=$(curl -s "${FOXINODES_API_CHECK_PORT}${NODE_IP}:${NODE_PORT}")
 	
-	# If VALUE is empty, return 1
-	if [ -z "$VALUE" ]
+	# If the request failed, return error
+	if [ $? -ne 0 ]
 	then
-		return 1;
+		output_error "Error requesting Foxinodes API, please try again later by executing the following command: bash dvpn-node-manager.sh check-port"
+		return 1
 	fi
 	
-	# Parse the JSON response to extract the values
-	SUCCESS=$(echo "$VALUE" | jq -r '.node.success')
+	# Parse JSON response
+	local RQ_ERROR=$(echo "$RESPONSE" | jq -r '.error')
+	local RQ_NODE_SUCCESS=$(echo "$RESPONSE" | jq -r '.node.success')
+	local RQ_NODE_ADDRESS=$(echo "$RESPONSE" | jq -r '.node.result.address')
 	
-	# If the success is true, return 1
-	if [ "SUCCESS" != "true" ]
+	# Handle case where attribute is not available
+	if [ -z "$RQ_ERROR" ] || [ -z "$RQ_NODE_SUCCESS" ] || [ -z "$RQ_NODE_ADDRESS" ]
+	then
+		output_error "Error parsing JSON response. The API is down or this script is outdated."
+		return 2
+	# If the success is not true, return 1
+	elif [ "$RQ_ERROR" == "true" ]
 	then
 		# If message is not empty, display it
-		MESSAGE=$(echo "$VALUE" | jq -r '.message')
-		if [ ! -z "$MESSAGE" ]
+		local RQ_MESSAGE=$(echo "$RESPONSE" | jq -r '.message')
+		if [ ! -z "$RQ_MESSAGE" ]
 		then
-			output_error "$MESSAGE"
+			output_error "$RQ_MESSAGE"
 		else
-			output_error "An error occurred while checking the port."
+			output_error "An unknow error occurred while checking the port."
 		fi
-		return 1;
+		return 3;
+	fi
+	
+	# Check if the node address is the same as the one we are checking
+	if [ "$RQ_NODE_ADDRESS" != "$NODE_ADDRESS" ]
+	then
+		output_error "Node address $RQ_NODE_ADDRESS is different from the one we are checking $NODE_ADDRESS"
+		return 4
 	fi
 	
 	return 0;
