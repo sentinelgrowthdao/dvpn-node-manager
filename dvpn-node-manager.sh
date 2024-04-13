@@ -2112,7 +2112,7 @@ then
 	whiptail --title "Port check" --msgbox "The node is accessible from the Internet." 8 78
 elif [ "$1" == "help" ]
 then
-	echo "This command sets up and configures a dVPN node."
+	echo "This command is used to set up, configure and manage a dVPN node."
 	echo "Usage: $(basename $0) [option]"
 	echo ""
 	echo "Options:"
