@@ -8,6 +8,8 @@ DOCS_URL="https://docs.sentinel.co/"
 # User and home directory
 USER_NAME=${SUDO_USER:-$(whoami)}
 USER_HOME=$(getent passwd ${USER_NAME} | cut -d: -f6)
+
+# Configuration file access paths
 CONFIG_DIR="${USER_HOME}/.sentinelnode"
 CONFIG_FILE="${CONFIG_DIR}/config.toml"
 CONFIG_WIREGUARD="${CONFIG_DIR}/wireguard.toml"
