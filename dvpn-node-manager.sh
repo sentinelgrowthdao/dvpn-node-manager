@@ -1605,11 +1605,43 @@ function menu_wallet()
 # Function to display the certificate information
 function menu_certificate()
 {
-	# Display certificate information
-	certificate_info || { output_error "Failed to get certificate information."; return 1; }
-
-	# Display certificate information
-	whiptail --title "Certificate Information" --msgbox "Certificate Information:\n  - Creation date: ${CERTIFICATE_DATE_CREATION}\n  - Expiration date: ${CERTIFICATE_DATE_EXPIRATION}\n  - Issuer: ${CERTIFICATE_ISSUER}\n  - Subject: ${CERTIFICATE_SUBJECT}" 12 78
+	
+	while true;
+	do
+		# Display certificate information
+		certificate_info || { output_error "Failed to get certificate information."; return 1; }
+	
+		# Construct the display message
+		local MESSAGE="Certificate Information:\n"
+		MESSAGE+="  - Creation date: ${CERTIFICATE_DATE_CREATION}\n"
+		MESSAGE+="  - Expiration date: ${CERTIFICATE_DATE_EXPIRATION}\n"
+		MESSAGE+="  - Issuer: ${CERTIFICATE_ISSUER}\n"
+		MESSAGE+="  - Subject: ${CERTIFICATE_SUBJECT}"
+		
+		# Display certificate information
+		if whiptail --title "Certificate Information" \
+			--yes-button "Renew" --no-button "Back" --defaultno \
+			--yesno "${MESSAGE}" 12 78
+		then
+			# Ask user to confirm certificate renewal
+			if whiptail --title "Confirm Certificate Renewal" --yesno "Are you sure you want to renew the certificate?" 8 78
+			then
+				# Renew the certificate
+				certificate_renew || { output_error "Failed to renew certificate."; return 1; }
+				# Check if container is started
+				if container_running
+				then
+					# Restart the container
+					container_restart || { output_error "Failed to restart the container."; return 1; }
+				fi
+				
+				# Display message indicating that the certificate has been renewed
+				whiptail --title "Certificate Renewal" --msgbox "Certificate has been renewed." 8 78
+			fi
+		else
+			break
+		fi
+	done
 }
 
 # Function to display the node menu
