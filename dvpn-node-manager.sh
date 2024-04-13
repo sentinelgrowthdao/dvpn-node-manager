@@ -2063,6 +2063,16 @@ then
 	fi
 	# Display the container logs
 	container_logs || exit 1;
+elif [ "$1" == "start" ]
+then
+	if container_running
+	then
+		output_error "The dVPN node container is already running."
+		exit 1
+	fi
+	container_start || exit 1;
+	output_info "The dVPN node container has been successfully started."
+	whiptail --title "Start Complete" --msgbox "The dVPN node container has been successfully started." 8 78
 else
 	while true
 	do
