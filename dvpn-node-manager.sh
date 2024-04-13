@@ -1162,20 +1162,61 @@ function firewall_configure()
 		ufw allow ${NODE_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow node port."; return 1; }
 	fi
 	
-	# Allow WireGuard
-	if ! ufw status | grep -q "${WIREGUARD_PORT}/tcp"
-	then
-		ufw allow ${WIREGUARD_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow WireGuard."; return 1; }
-	fi
-	
-	# Allow V2Ray
-	if ! ufw status | grep -q "${V2RAY_PORT}/udp"
-	then
-		ufw allow ${V2RAY_PORT}/udp > /dev/null 2>&1 || { output_error "Failed to allow V2Ray."; return 1; }
-	fi
+	# Add ports to firewall
+	firewall_allow_node || { output_error "Failed to allow node port."; return 1; }
+	firewall_allow_wireguard || { output_error "Failed to allow WireGuard."; return 1; }
+	firewall_allow_v2ray || { output_error "Failed to allow V2Ray."; return 1; }
 	
 	# Reload UFW
 	ufw reload > /dev/null 2>&1 || { output_error "Failed to reload UFW."; return 1; }
+	
+	return 0;
+}
+
+# Function to add node port
+function firewall_allow_node()
+{
+	# Allow Node port if it is not empty
+	if [ ! -z "$NODE_PORT" ]
+	then
+		# Allow Node port if not already allowed
+		if ! ufw status | grep -q "${NODE_PORT}/tcp"
+		then
+			ufw allow ${NODE_PORT}/tcp > /dev/null 2>&1 || return 1;
+		fi
+	fi
+	
+	return 0;
+}
+
+# Function to add wireguard port to firewall
+function firewall_allow_wireguard()
+{
+	# If node type is WireGuard and WireGuard port is not empty
+	if [ "$NODE_TYPE" = "wireguard" ] && [ ! -z "$WIREGUARD_PORT" ]
+	then
+		# Allow WireGuard if not already allowed
+		if ! ufw status | grep -q "${WIREGUARD_PORT}/udp"
+		then
+			ufw allow ${WIREGUARD_PORT}/udp > /dev/null 2>&1 || return 1;
+		fi
+	fi
+	
+	return 0;
+}
+
+# Function to add v2ray port to firewall
+function firewall_allow_v2ray()
+{
+	# If node type is V2Ray and V2Ray port is not empty
+	if [ "$NODE_TYPE" = "v2ray" ] && [ ! -z "$V2RAY_PORT" ]
+	then
+		# Allow V2Ray if not already allowed
+		if ! ufw status | grep -q "${V2RAY_PORT}/tcp"
+		then
+			ufw allow ${V2RAY_PORT}/tcp > /dev/null 2>&1 || return 1;
+		fi
+	fi
 	
 	return 0;
 }
