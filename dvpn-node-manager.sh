@@ -1469,11 +1469,11 @@ function menu_configuration()
 	wallet_addresses || { output_error "Failed to get public address, wallet seems to be corrupted."; return 1; }
 
 	CHOICE=$(whiptail --title "dVPN Node Manager" --menu "Welcome to the dVPN node configuration process.\n\nPlease select an option:" 15 78 5 \
-		"Settings" "Change node configuration" \
-		"Wallet" "View wallet information" \
-		"Certificate" "View certificate information" \
-		"Actions" "Perform node actions" \
-		"Update" "Update the node" \
+		"Settings" "Modify node settings" \
+		"Wallet" "Access wallet details" \
+		"Certificate" "Access certificate details" \
+		"Actions" "Manage node operations" \
+		"Update" "Apply node updates" \
 		--ok-button "Select" --cancel-button "Finish" 3>&1 1>&2 2>&3)
 
 	if [ $? -eq 1 ]; then  # Check if the user pressed the 'Finish' button, which is the cancel button now
