@@ -926,17 +926,34 @@ function wallet_initialization()
 		# Remove end of line
 		MNEMONIC=$(echo "$MNEMONIC" | tr -d '\r')
 		
+		# Calculate the maximum width for each column
+		declare -a max_widths=(0 0 0 0)
+		for i in {0..3}; do
+			max_widths[$i]=$(echo "$MNEMONIC" | tr -s ' ' '\n' | awk -v pos="$((i+1))" '(NR-1) % 4 == pos-1' | awk '{print length}' | sort -nr | head -n1)
+		done
+		# After calculating the maximum width, add 3 to each column
+		for i in {0..3}; do
+			max_widths[$i]=$((max_widths[$i] + 3))
+		done
+		
 		# Découpage intelligent en groupes de mots
-		formatted_mnemonic=$(echo "$MNEMONIC" | tr -s ' ' '\n' | awk '{
-			printf "%d. %s ", NR, $0;
-			if (NR % 4 == 0) print "";
+		formatted_mnemonic=$(echo "$MNEMONIC" | tr -s ' ' '\n' | awk -v mw1="${max_widths[0]}" -v mw2="${max_widths[1]}" -v mw3="${max_widths[2]}" -v mw4="${max_widths[3]}" '{
+			if (NR % 4 == 1) printf "%2d. %-*s ", NR, mw1, $0;
+			if (NR % 4 == 2) printf "%2d. %-*s ", NR, mw2, $0;
+			if (NR % 4 == 3) printf "%2d. %-*s ", NR, mw3, $0;
+			if (NR % 4 == 0) printf "%2d. %-*s\n", NR, mw4, $0;
 		} END {
 			if (NR % 4 != 0) print "";
-		}' | tr -d '\r')
+		}')
 		
-		# Affichage
-		whiptail --title "Wallet Mnemonic" --msgbox "Please save the following mnemonic. This will be required to restore your wallet in the future.\n\nMnemonic:\n${formatted_mnemonic}" 20 100
-		
+		# Display the mnemonic
+		MESSAGE="    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		MESSAGE+="    !! Please securely save the 24-word mnemonic phrase provided. !!\n"
+		MESSAGE+="    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+		MESSAGE+="\n"
+		MESSAGE+="It's essential for recovering your wallet if you lose access or forget your password. Loss of this phrase means permanent loss of access to your funds and dVPN node. Store it privately and in multiple safe places.\n\n"
+		MESSAGE+="Mnemonic:\n\n${formatted_mnemonic}"
+		whiptail --title "Wallet Mnemonic" --msgbox "$MESSAGE" 22 80
 	fi
 	
 	output_log "Wallet initialized."
