@@ -974,7 +974,7 @@ function wallet_initialization()
 		whiptail --title "Wallet Mnemonic" --msgbox "$MESSAGE" 22 80
 	fi
 	
-	output_log "Wallet initialized."
+	output_info "Wallet created successfully."
 	
 	return 0;
 }
