@@ -12,6 +12,8 @@ CONFIG_DIR="${USER_HOME}/.sentinelnode"
 CONFIG_FILE="${CONFIG_DIR}/config.toml"
 CONFIG_WIREGUARD="${CONFIG_DIR}/wireguard.toml"
 CONFIG_V2RAY="${CONFIG_DIR}/v2ray.toml"
+CONFIG_TLS_CRT="${CONFIG_DIR}/tls.crt"
+CONFIG_TLS_KEY="${CONFIG_DIR}/tls.key"
 
 # Configuration variables
 CONTAINER_NAME="sentinel-dvpn-node"
@@ -75,7 +77,7 @@ function load_config_files()
 	NODE_IP=$(grep "^remote_url\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
 	NODE_PORT=$(grep "^listen_on\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F":" '{print $2}')
 	CHAIN_ID=$(grep "^id\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	MAX_PEERS=$(grep "^max_peers\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	MAX_PEERS=$(grep "^max_peers\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	# RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	# BACKEND=$(grep "^backend\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	WALLET_NAME=$(grep "^from\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
@@ -92,7 +94,7 @@ function load_config_files()
 	}' $CONFIG_FILE)
 	
 	# Find out if the node is residential or datacenter
-	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	
 	# If hourly_prices equal to DATACENTER_HOURLY_PRICES
 	if [ "$HOURLY_PRICES" == "$DATACENTER_HOURLY_PRICES" ]
@@ -226,13 +228,13 @@ function load_network_configuration()
 function generate_sentinel_config()
 {
 	# If sentinel config not generated
-	if [ ! -f "${USER_HOME}/.sentinelnode/config.toml" ]
+	if [ ! -f "${CONFIG_FILE}" ]
 	then
 		# Show waiting message
 		output_info "Please wait while the Sentinel configuration is being generated..."
 		# Generate Sentinel config
 		docker run --rm \
-			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
+			--volume ${CONFIG_DIR}:/root/.sentinelnode \
 			${CONTAINER_NAME} process config init || { output_error "Failed to generate Sentinel configuration."; return 1; }
 	fi
 	
@@ -246,26 +248,26 @@ function generate_vpn_config()
 	if [ "$NODE_TYPE" == "wireguard" ]
 	then
 		# If wireguard config not generated
-		if [ ! -f "${USER_HOME}/.sentinelnode/wireguard.toml" ]
+		if [ ! -f "${CONFIG_WIREGUARD}" ]
 		then
 			# Show waiting message
 			output_info "Please wait while the WireGuard configuration is being generated..."
 			# Generate WireGuard config
 			docker run --rm \
-				--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
+				--volume ${CONFIG_DIR}:/root/.sentinelnode \
 				${CONTAINER_NAME} process wireguard config init || { output_error "Failed to generate WireGuard configuration."; return 1; }
 		fi
 	# If node type is v2ray
 	elif [ "$NODE_TYPE" == "v2ray" ]
 	then
 		# If v2ray config not generated
-		if [ ! -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
+		if [ ! -f "${CONFIG_V2RAY}" ]
 		then
 			# Show waiting message
 			output_info "Please wait while the V2Ray configuration is being generated..."
 			# Generate V2Ray config
 			docker run --rm \
-				--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
+				--volume ${CONFIG_DIR}:/root/.sentinelnode \
 				${CONTAINER_NAME} process v2ray config init || { output_error "Failed to generate V2Ray configuration."; return 1; }
 		fi
 	else
@@ -280,15 +282,15 @@ function generate_vpn_config()
 function remove_vpn_config_files()
 {
 	# If wireguard config exists, remove it
-	if [ -f "${USER_HOME}/.sentinelnode/wireguard.toml" ]
+	if [ -f "${CONFIG_WIREGUARD}" ]
 	then
-		rm -f ${USER_HOME}/.sentinelnode/wireguard.toml
+		rm -f ${CONFIG_WIREGUARD}
 	fi
 	
 	# If v2ray config exists, remove it
-	if [ -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
+	if [ -f "${CONFIG_V2RAY}" ]
 	then
-		rm -f ${USER_HOME}/.sentinelnode/v2ray.toml
+		rm -f ${CONFIG_V2RAY}
 	fi
 	
 	return 0;
@@ -386,14 +388,14 @@ function check_installation()
 	fi
 	
 	# If sentinel config not generated, return false
-	if [ ! -f "${USER_HOME}/.sentinelnode/config.toml" ]
+	if [ ! -f "${CONFIG_FILE}" ]
 	then
 		output_log "Sentinel config is not generated."
 		return 1
 	fi
 	
 	# If wireguard or v2ray config not generated, return false
-	if [ ! -f "${USER_HOME}/.sentinelnode/wireguard.toml" ] && [ ! -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
+	if [ ! -f "${CONFIG_WIREGUARD}" ] && [ ! -f "${CONFIG_V2RAY}" ]
 	then
 		output_log "WireGuard and V2Ray config is not generated."
 		return 1
@@ -484,7 +486,7 @@ function os_raspbian()
 function certificate_generate()
 {
 	# If certificate already exists, return zero
-	if [ -f "${USER_HOME}/.sentinelnode/tls.crt" ] && [ -f "${USER_HOME}/.sentinelnode/tls.key" ]
+	if [ -f "${CONFIG_TLS_CRT}" ] && [ -f "${CONFIG_TLS_KEY}" ]
 	then
 		return 0
 	fi
@@ -504,12 +506,12 @@ function certificate_generate()
 	-sha256 \
 	-days 365 \
 	-nodes \
-	-out ${USER_HOME}/.sentinelnode/tls.crt \
+	-out ${CONFIG_TLS_CRT} \
 	-subj "/C=${NODE_COUNTRY}/ST=NA/L=./O=NA/OU=./CN=." \
-	-keyout ${USER_HOME}/.sentinelnode/tls.key > /dev/null 2>&1 || { output_error "Failed to generate certificate."; return 1; }
+	-keyout ${CONFIG_TLS_KEY} > /dev/null 2>&1 || { output_error "Failed to generate certificate."; return 1; }
 	
-	chown root:root ${USER_HOME}/.sentinelnode/tls.crt > /dev/null 2>&1 && \
-	chown root:root ${USER_HOME}/.sentinelnode/tls.key > /dev/null 2>&1 || { output_error "Failed to change ownership of certificate files."; return 1; }
+	chown root:root ${CONFIG_TLS_CRT} > /dev/null 2>&1 && \
+	chown root:root ${CONFIG_TLS_KEY} > /dev/null 2>&1 || { output_error "Failed to change ownership of certificate files."; return 1; }
 	
 	return 0;
 }
@@ -518,14 +520,14 @@ function certificate_generate()
 function certificate_info()
 {
 	# Check if certificate files exist
-	if [ ! -f "${USER_HOME}/.sentinelnode/tls.crt" ] || [ ! -f "${USER_HOME}/.sentinelnode/tls.key" ]
+	if [ ! -f "${CONFIG_TLS_CRT}" ] || [ ! -f "${CONFIG_TLS_KEY}" ]
 	then
 		output_info "Certificate or key file not found."
 		return 1
 	fi
 	
 	# Read certificate information
-	local CERTIFICATE=$(openssl x509 -in "${USER_HOME}/.sentinelnode/tls.crt" -text)
+	local CERTIFICATE=$(openssl x509 -in "${CONFIG_TLS_CRT}" -text)
 	if [ -z "$CERTIFICATE" ]
 	then
 		output_info "Failed to read certificate."
@@ -545,14 +547,14 @@ function certificate_info()
 function certificate_remove()
 {
 	# If certificate files do not exist, return 0
-	if [ ! -f "${USER_HOME}/.sentinelnode/tls.crt" ] && [ ! -f "${USER_HOME}/.sentinelnode/tls.key" ]
+	if [ ! -f "${CONFIG_TLS_CRT}" ] && [ ! -f "${CONFIG_TLS_KEY}" ]
 	then
 		return 0;
 	fi
 	
 	# Remove certificate files
-	rm -f ${USER_HOME}/.sentinelnode/tls.crt
-	rm -f ${USER_HOME}/.sentinelnode/tls.key
+	rm -f ${CONFIG_TLS_CRT}
+	rm -f ${CONFIG_TLS_KEY}
 	return 0;
 }
 
@@ -771,7 +773,7 @@ function container_start()
 		docker run -d \
 			--name ${CONTAINER_NAME} \
 			--restart unless-stopped \
-			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
+			--volume ${CONFIG_DIR}:/root/.sentinelnode \
 			--volume /lib/modules:/lib/modules \
 			--cap-drop ALL \
 			--cap-add NET_ADMIN \
@@ -791,7 +793,7 @@ function container_start()
 		docker run -d \
 			--name ${CONTAINER_NAME} \
 			--restart unless-stopped \
-			--volume "${USER_HOME}/.sentinelnode:/root/.sentinelnode" \
+			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
 			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
 			--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
 			${CONTAINER_NAME} process start > /dev/null 2>&1 || { output_error "Failed to start V2Ray node."; return 1; }
@@ -872,7 +874,7 @@ function container_logs()
 function wallet_initialization()
 {
 	# Check if wallet exists
-	if docker run --rm --interactive --tty --volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode ${CONTAINER_NAME} process keys list | grep -q "sentnode"
+	if docker run --rm --interactive --tty --volume ${CONFIG_DIR}:/root/.sentinelnode ${CONTAINER_NAME} process keys list | grep -q "sentnode"
 	then
 		# Ask user if they want to delete the existing wallet
 		if whiptail --title "Wallet Exists" --yesno "A wallet already exists. Do you want to delete the existing wallet and continue?" 8 78
@@ -903,7 +905,7 @@ function wallet_initialization()
 		
 		echo "$MNEMONIC" | docker run --rm \
 			--interactive \
-			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
+			--volume ${CONFIG_DIR}:/root/.sentinelnode \
 			${CONTAINER_NAME} process keys add --recover || { output_error "Failed to restore wallet."; return 1; }
 	else
 		# Create new wallet
@@ -911,7 +913,7 @@ function wallet_initialization()
 		OUTPUT=$(docker run --rm \
 					--interactive \
 					--tty \
-					--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
+					--volume ${CONFIG_DIR}:/root/.sentinelnode \
 					${CONTAINER_NAME} process keys add)
 		
 		# If the ouput contains "Important" then extract the mnemonic
@@ -969,7 +971,7 @@ function wallet_exist()
 	wallet_list_output=$(docker run --rm \
 		--interactive \
 		--tty \
-		--volume "${USER_HOME}/.sentinelnode:/root/.sentinelnode" \
+		--volume "${CONFIG_DIR}:/root/.sentinelnode" \
 		"${CONTAINER_NAME}" process keys list)
 	
 	# Use grep to check if the wallet name is in the list
@@ -994,7 +996,7 @@ function wallet_remove()
 	docker run --rm \
 		--interactive \
 		--tty \
-		--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
+		--volume ${CONFIG_DIR}:/root/.sentinelnode \
 		${CONTAINER_NAME} process keys delete $WALLET_NAME || { output_error "Failed to delete wallet."; return 1; }
 	
 	return 0;
@@ -1016,7 +1018,7 @@ function wallet_addresses()
 	local WALLET_INFO=$(docker run --rm \
 		--interactive \
 		--tty \
-		--volume "${USER_HOME}/.sentinelnode:/root/.sentinelnode" \
+		--volume "${CONFIG_DIR}:/root/.sentinelnode" \
 		"${CONTAINER_NAME}" process keys show | awk -v name="$WALLET_NAME" '$1 == name')
 
 	# Extract public and node addresses from the output
@@ -1369,7 +1371,7 @@ function message_docker_reboot_required()
 # Function to display gigabytes prices
 function message_gigabyte_prices()
 {
-	local GIGABYTE_PRICES=$(grep "^gigabyte_prices\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	local GIGABYTE_PRICES=$(grep "^gigabyte_prices\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	# Display message with gigabyte prices
 	whiptail --title "Gigabyte Prices" --msgbox "Prices for one gigabyte of bandwidth provided:\n\n${GIGABYTE_PRICES}" 15 78
 }
@@ -1377,7 +1379,7 @@ function message_gigabyte_prices()
 # Function to display hourly prices
 function message_hourly_prices()
 {
-	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	# Display message with hourly prices
 	whiptail --title "Hourly Prices" --msgbox "Prices for one hour of bandwidth provided:\n\n${HOURLY_PRICES}" 15 78
 }
@@ -1401,13 +1403,13 @@ function menu_installation()
 	container_install || return 1;
 	
 	# Check if the sentinel node directory exists then create it
-	if [ ! -d "${USER_HOME}/.sentinelnode" ]
+	if [ ! -d "${CONFIG_DIR}" ]
 	then
-		mkdir ${USER_HOME}/.sentinelnode || { output_error "Failed to create Sentinel node directory."; return 1; }
+		mkdir ${CONFIG_DIR} || { output_error "Failed to create Sentinel node directory."; return 1; }
 	fi
 	
 	# If Certificate does not exist then generate it
-	if [ ! -f "${USER_HOME}/.sentinelnode/cert.pem" ] || [ ! -f "${USER_HOME}/.sentinelnode/key.pem" ]
+	if [ ! -f "${CONFIG_TLS_CRT}" ] || [ ! -f "${CONFIG_TLS_KEY}" ]
 	then
 		certificate_generate || return 1;
 	fi
@@ -1416,7 +1418,7 @@ function menu_installation()
 	local config_created=false;
 	
 	# If Sentinel config does not exist
-	if [ ! -f "${USER_HOME}/.sentinelnode/config.toml" ]
+	if [ ! -f "${CONFIG_FILE}" ]
 	then
 		# Change the value for force question
 		config_created=true;
@@ -1492,7 +1494,7 @@ function menu_installation()
 				--yes-button "OK" --no-button "Abort" \
 				--yesno "There seems to be an issue with wallet initialization. We will remove the existing wallet and start the initialization process again. Please note that all data associated with the wallet will be permanently lost. You will need to enter the previously saved recovery words again.\n\nDo you want to proceed with wallet removal and re-initialization?" 10 78
 			then
-				wallet_remove || { output_error "Failed to remove wallet. Please do it manually by running the following command: docker run --rm --interactive --tty --volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode ${CONTAINER_NAME} process keys delete $WALLET_NAME"; return 1; }
+				wallet_remove || { output_error "Failed to remove wallet. Please do it manually by running the following command: docker run --rm --interactive --tty --volume ${CONFIG_DIR}:/root/.sentinelnode ${CONTAINER_NAME} process keys delete $WALLET_NAME"; return 1; }
 			else
 				output_info "Wallet removal aborted. Exiting the script."
 				exit 1
@@ -1956,7 +1958,7 @@ then
 	remove_config_files || exit 1;
 	
 	# Remove the Sentinel node directory
-	rm -rf ${USER_HOME}/.sentinelnode || { output_error "Failed to remove Sentinel node directory."; exit 1; }
+	rm -rf ${CONFIG_DIR} || { output_error "Failed to remove Sentinel node directory."; exit 1; }
 	
 	# Display message indicating that the Sentinel node has been removed
 	whiptail --title "Uninstallation Complete" --msgbox "The Sentinel node has been successfully removed." 8 78
