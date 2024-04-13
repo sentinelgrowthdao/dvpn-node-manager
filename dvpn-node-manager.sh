@@ -1173,40 +1173,54 @@ function ask_remote_ip()
 # Function to ask for node port
 function ask_node_port()
 {
-	# Ask for node port
-	local VALUE=$(whiptail --inputbox "Please enter the port number you want to use for the node:" 8 78 "$NODE_PORT" --title "Node Port" 3>&1 1>&2 2>&3)
+	local VALUE=""
 	
-	# Check if the user pressed Cancel
-	if [ $? -ne 0 ]; then
-		return 1
-	fi
-
-	# Check if the user entered a value
-	if [ -z "$VALUE" ]; then
-		return 2
-	fi
-
+	while true
+	do
+		# Ask for node port
+		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for the node:" 8 78 "$NODE_PORT" \
+			--title "Node Port" 3>&1 1>&2 2>&3) || { echo "Failed to get node port" && return 1; }
+		# If value is not empty and is integer
+		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]]
+		then
+			break
+		fi
+	done
+	
 	# Set value received from whiptail to NODE_PORT
 	NODE_PORT=$VALUE
 	return 0;
 }
 
+# Function to request the correct vpn port
+function ask_vpn_port()
+{
+	if [ "$NODE_TYPE" = "wireguard" ]
+	then
+		ask_wireguard_port
+	elif [ "$NODE_TYPE" = "v2ray" ]
+	then
+		ask_v2ray_port
+	fi
+}
+
 # Function to ask for WireGuard port
 function ask_wireguard_port()
 {
-	# Ask for WireGuard port
-	local VALUE=$(whiptail --inputbox "Please enter the port number you want to use for WireGuard:" 8 78 "$WIREGUARD_PORT" --title "WireGuard Port" 3>&1 1>&2 2>&3)
+	local VALUE=""
 	
-	# Check if the user pressed Cancel
-	if [ $? -ne 0 ]; then
-		return 1
-	fi
-
-	# Check if the user entered a value
-	if [ -z "$VALUE" ]; then
-		return 2
-	fi
-
+	while true
+	do
+		# Ask for node port
+		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for WireGuard:" 8 78 "$WIREGUARD_PORT" \
+			--title "WireGuard Port" 3>&1 1>&2 2>&3) || { echo "Failed to get node port" && return 1; }
+		# If value is not empty and is integer
+		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]]
+		then
+			break
+		fi
+	done
+	
 	# Set value received from whiptail to WIREGUARD_PORT
 	WIREGUARD_PORT=$VALUE
 	return 0;
@@ -1215,19 +1229,20 @@ function ask_wireguard_port()
 # Function to ask for V2Ray port
 function ask_v2ray_port()
 {
-	# Ask for V2Ray port
-	local VALUE=$(whiptail --inputbox "Please enter the port number you want to use for V2Ray:" 8 78 "$V2RAY_PORT" --title "V2Ray Port" 3>&1 1>&2 2>&3)
+	local VALUE=""
 	
-	# Check if the user pressed Cancel
-	if [ $? -ne 0 ]; then
-		return 1
-	fi
-
-	# Check if the user entered a value
-	if [ -z "$VALUE" ]; then
-		return 2
-	fi
-
+	while true
+	do
+		# Ask for node port
+		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for V2Ray:" 8 78 "$V2RAY_PORT" \
+			--title "V2Ray Port" 3>&1 1>&2 2>&3) || { echo "Failed to get node port" && return 1; }
+		# If value is not empty and is integer
+		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]]
+		then
+			break
+		fi
+	done
+	
 	# Set value received from whiptail to V2RAY_PORT
 	V2RAY_PORT=$VALUE
 	return 0;
@@ -1682,30 +1697,14 @@ function menu_settings()
 				fi
 				;;
 			2)
-				if ask_remote_ip && ask_node_port
+				if ask_remote_ip && ask_node_port && ask_vpn_port
 				then
-					if [ "$NODE_TYPE" = "wireguard" ]
-					then
-						if ask_wireguard_port;
-						then
-							firewall_configure || return 1;
-							refresh_config_files || return 1;
-							container_remove || return 1;
-							container_start || return 1;
-							# Display message indicating that the settings have been updated
-							whiptail --title "Settings Updated" --msgbox "Network settings have been updated." 8 78
-						fi
-					elif [ "$NODE_TYPE" = "v2ray" ]
-					then
-						if ask_v2ray_port
-						then
-							firewall_configure || return 1;
-							refresh_config_files || return 1;
-							container_restart || return 1;
-							# Display message indicating that the settings have been updated
-							whiptail --title "Settings Updated" --msgbox "Network settings have been updated." 8 78
-						fi
-					fi
+					firewall_configure || return 1;
+					refresh_config_files || return 1;
+					container_remove || return 1;
+					container_start || return 1;
+					# Display message indicating that the settings have been updated
+					whiptail --title "Settings Updated" --msgbox "Network settings have been updated." 8 78
 				fi
 				;;
 			3)
