@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Installer version
+# Script version
 INSTALLER_VERSION="1.0.0"
 # Sentinel documentation Url
 DOCS_URL="https://docs.sentinel.co/"
@@ -2094,7 +2094,7 @@ function menu_about()
 	Operating System: $(lsb_release -is) $(lsb_release -rs)
 	Kernel Version: $(uname -r)
 	Architecture: $(uname -m)
-	Installer Version: ${INSTALLER_VERSION}
+	Script Version: ${INSTALLER_VERSION}
 	Node Version: ${NODE_VERSION}
 	Sentinel Docs: ${DOCS_URL}" 15 60
 
@@ -2126,8 +2126,7 @@ echo "Here are your system's technical specifications:"
 echo "Operating System: $(lsb_release -is) $(lsb_release -rs)"
 echo "Kernel Version: $(uname -r)"
 echo "Architecture: $(uname -m)"
-echo "Installer version: ${INSTALLER_VERSION}"
-echo -e ""
+echo "Script Version: ${INSTALLER_VERSION}"
 
 # Check if the script is executed with sudo permissions
 if [ "$(id -u)" != "0" ]; then
