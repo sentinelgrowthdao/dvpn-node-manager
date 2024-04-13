@@ -224,8 +224,8 @@ function load_network_configuration()
 	return 0;
 }
 
-# Function to configure network settings
-function generate_sentinel_config()
+# Function to generate node configuration file
+function generate_node_config()
 {
 	# If sentinel config not generated
 	if [ ! -f "${CONFIG_FILE}" ]
@@ -1486,7 +1486,7 @@ function menu_installation()
 	fi
 	
 	# Generate Sentinel configurations
-	generate_sentinel_config || return 1;
+	generate_node_config || return 1;
 	
 	# Load configuration into variables
 	load_config_files || return 1;
