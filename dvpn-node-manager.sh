@@ -1516,9 +1516,10 @@ function menu_settings()
 		then
 			MESSAGE+="  - V2Ray Port: ${V2RAY_PORT}\n"
 		fi
+		MESSAGE+="See more at: https://${NODE_IP}:${NODE_PORT}/status\n"
 		MESSAGE+="\nChoose a settings group to configure:"
 		
-		CHOICE=$(whiptail --title "Settings" --menu "${MESSAGE}" 20 60 5 \
+		CHOICE=$(whiptail --title "Settings" --menu "${MESSAGE}" 21 60 5 \
 			"1" "Moniker" \
 			"2" "Network Settings" \
 			"3" "VPN Settings" \
