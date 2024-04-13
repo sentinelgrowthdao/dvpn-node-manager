@@ -2098,6 +2098,9 @@ then
 		output_info "The dVPN node container is stopped."
 		whiptail --title "Status" --msgbox "The dVPN node container is stopped." 8 78
 	fi
+elif [ "$1" == "update" ]
+then
+	update_container || exit 1;
 else
 	while true
 	do
