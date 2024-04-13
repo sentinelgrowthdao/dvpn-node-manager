@@ -2053,7 +2053,7 @@ then
 	
 	# Exit the script
 	exit 0
-elif [ "$1" == "logs" ]
+elif [ "$1" == "log" ] || [ "$1" == "logs" ]
 then
 	# Check if the Sentinel container is running
 	if ! container_running
