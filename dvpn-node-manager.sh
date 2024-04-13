@@ -74,8 +74,6 @@ function load_config_files()
 	NODE_TYPE=$(grep "^type\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	NODE_IP=$(grep "^remote_url\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
 	NODE_PORT=$(grep "^listen_on\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F":" '{print $2}')
-	WIREGUARD_PORT=$(grep "^listen_port\s*=" "${CONFIG_WIREGUARD}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	V2RAY_PORT=$(grep "^listen_port\s*=" "${CONFIG_V2RAY}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	CHAIN_ID=$(grep "^id\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	MAX_PEERS=$(grep "^max_peers\s*=" "${USER_HOME}/.sentinelnode/config.toml" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	# RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
@@ -106,6 +104,21 @@ function load_config_files()
 		NODE_LOCATION="residential"
 	else
 		NODE_LOCATION=""
+	fi
+	
+	# If node type is wireguard and wireguard config exists
+	if [ "$NODE_TYPE" == "wireguard" ] && [ -f "${CONFIG_WIREGUARD}" ]
+	then
+		# Load from WireGuard configuration
+		WIREGUARD_PORT=$(grep "^listen_port\s*=" "${CONFIG_WIREGUARD}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+		# Duplicate the value to V2RAY_PORT
+		V2RAY_PORT=$WIREGUARD_PORT
+	elif [ "$NODE_TYPE" == "v2ray" ] && [ -f "${CONFIG_V2RAY}" ]
+	then
+		# Load from V2Ray configuration
+		V2RAY_PORT=$(grep "^listen_port\s*=" "${CONFIG_V2RAY}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+		# Duplicate the value to WIREGUARD_PORT
+		WIREGUARD_PORT=$V2RAY_PORT
 	fi
 	
 	return 0;
@@ -140,12 +153,6 @@ function refresh_config_files()
 
 	# Update max_peers parameter
 	sed -i "s/max_peers = .*/max_peers = ${MAX_PEERS}/g" ${CONFIG_FILE} || { output_error "Failed to set max peers."; return 1; }
-
-	# Update WireGuard port
-	sed -i "s/listen_port = .*/listen_port = ${WIREGUARD_PORT}/g" ${CONFIG_WIREGUARD} || { output_error "Failed to set WireGuard port."; return 1; }
-	
-	# Update V2Ray port
-	sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${CONFIG_V2RAY} || { output_error "Failed to set V2Ray port."; return 1; }
 	
 	# Update Gas parameters
 	sed -i "s/gas = .*/gas = ${GAS}/g" ${CONFIG_FILE} || { output_error "Failed to set gas."; return 1; }
@@ -171,7 +178,18 @@ function refresh_config_files()
 		# Update hourly_prices parameter
 		sed -i "s/hourly_prices = .*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
 	fi
-
+	
+	# Update vpn configuration
+	if [ "$NODE_TYPE" == "wireguard" ]
+	then
+		# Update WireGuard port
+		sed -i "s/listen_port = .*/listen_port = ${WIREGUARD_PORT}/g" ${CONFIG_WIREGUARD} || { output_error "Failed to set WireGuard port."; return 1; }
+	elif [ "$NODE_TYPE" == "v2ray" ]
+	then
+		# Update V2Ray port
+		sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${CONFIG_V2RAY} || { output_error "Failed to set V2Ray port."; return 1; }
+	fi
+	
 	return 0;
 }
 
@@ -218,26 +236,59 @@ function generate_sentinel_config()
 			${CONTAINER_NAME} process config init || { output_error "Failed to generate Sentinel configuration."; return 1; }
 	fi
 	
-	# If wireguard config not generated
-	if [ ! -f "${USER_HOME}/.sentinelnode/wireguard.toml" ]
+	return 0;
+}
+
+# Function to generate vpn configuration
+function generate_vpn_config()
+{
+	# If node type is wireguard
+	if [ "$NODE_TYPE" == "wireguard" ]
 	then
-		# Show waiting message
-		output_info "Please wait while the WireGuard configuration is being generated..."
-		# Generate WireGuard config
-		docker run --rm \
-			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
-			${CONTAINER_NAME} process wireguard config init || { output_error "Failed to generate WireGuard configuration."; return 1; }
+		# If wireguard config not generated
+		if [ ! -f "${USER_HOME}/.sentinelnode/wireguard.toml" ]
+		then
+			# Show waiting message
+			output_info "Please wait while the WireGuard configuration is being generated..."
+			# Generate WireGuard config
+			docker run --rm \
+				--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
+				${CONTAINER_NAME} process wireguard config init || { output_error "Failed to generate WireGuard configuration."; return 1; }
+		fi
+	# If node type is v2ray
+	elif [ "$NODE_TYPE" == "v2ray" ]
+	then
+		# If v2ray config not generated
+		if [ ! -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
+		then
+			# Show waiting message
+			output_info "Please wait while the V2Ray configuration is being generated..."
+			# Generate V2Ray config
+			docker run --rm \
+				--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
+				${CONTAINER_NAME} process v2ray config init || { output_error "Failed to generate V2Ray configuration."; return 1; }
+		fi
+	else
+		output_error "Invalid node type."
+		return 1
 	fi
 	
-	# If v2ray config not generated
-	if [ ! -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
+	return 0;
+}
+
+# Function to remove vpn configuration files
+function remove_vpn_config_files()
+{
+	# If wireguard config exists, remove it
+	if [ -f "${USER_HOME}/.sentinelnode/wireguard.toml" ]
 	then
-		# Show waiting message
-		output_info "Please wait while the V2Ray configuration is being generated..."
-		# Generate V2Ray config
-		docker run --rm \
-			--volume ${USER_HOME}/.sentinelnode:/root/.sentinelnode \
-			${CONTAINER_NAME} process v2ray config init || { output_error "Failed to generate V2Ray configuration."; return 1; }
+		rm -f ${USER_HOME}/.sentinelnode/wireguard.toml
+	fi
+	
+	# If v2ray config exists, remove it
+	if [ -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
+	then
+		rm -f ${USER_HOME}/.sentinelnode/v2ray.toml
 	fi
 	
 	return 0;
@@ -342,7 +393,7 @@ function check_installation()
 	fi
 	
 	# If wireguard or v2ray config not generated, return false
-	if [ ! -f "${USER_HOME}/.sentinelnode/wireguard.toml" ] || [ ! -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
+	if [ ! -f "${USER_HOME}/.sentinelnode/wireguard.toml" ] && [ ! -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
 	then
 		output_log "WireGuard and V2Ray config is not generated."
 		return 1
@@ -1382,6 +1433,8 @@ function menu_installation()
 	then
 		ask_node_type || { output_error "Failed to get node type."; return 1; }
 		config_changed=true;
+		# Generate WireGuard or V2Ray configurations
+		generate_vpn_config || { output_error "Failed to generate vpn configuration."; return 1; }
 	fi
 	
 	# If Remote IP is empty, ask for Remote IP
@@ -1585,6 +1638,8 @@ function menu_settings()
 			3)
 				if ask_node_type && ask_max_peers
 				then
+					remove_vpn_config_files || return 1;
+					generate_vpn_config || return 1;
 					refresh_config_files || return 1;
 					container_restart || return 1;
 					# Display message indicating that the settings have been updated
