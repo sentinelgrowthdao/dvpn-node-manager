@@ -1207,8 +1207,10 @@ function ask_node_port()
 		# Ask for node port
 		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for the node:" 8 78 "$NODE_PORT" \
 			--title "Node Port" 3>&1 1>&2 2>&3) || { echo "Failed to get node port" && return 1; }
-		# If value is not empty and is integer
-		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]]
+		# If value is not empty and is integer (between 1024 and 65535) and different of $WIREGUARD_PORT or $V2RAY_PORT
+		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]] && \
+			[[ "$VALUE" -ge 1024 ]] && [[ "$VALUE" -le 65535 ]] && \
+			[[ "$VALUE" -ne "$WIREGUARD_PORT" ]] && [[ "$VALUE" -ne "$V2RAY_PORT" ]]
 		then
 			break
 		fi
@@ -1241,8 +1243,10 @@ function ask_wireguard_port()
 		# Ask for node port
 		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for WireGuard:" 8 78 "$WIREGUARD_PORT" \
 			--title "WireGuard Port" 3>&1 1>&2 2>&3) || { echo "Failed to get node port" && return 1; }
-		# If value is not empty and is integer
-		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]]
+		# If value is not empty and is integer (between 1024 and 65535) and different of $NODE_PORT
+		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]] && \
+			[[ "$VALUE" -ge 1024 ]] && [[ "$VALUE" -le 65535 ]] && \
+			[[ "$VALUE" -ne "$NODE_PORT" ]]
 		then
 			break
 		fi
@@ -1263,8 +1267,8 @@ function ask_v2ray_port()
 		# Ask for node port
 		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for V2Ray:" 8 78 "$V2RAY_PORT" \
 			--title "V2Ray Port" 3>&1 1>&2 2>&3) || { echo "Failed to get node port" && return 1; }
-		# If value is not empty and is integer
-		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]]
+		# If value is not empty and is integer and is different of $NODE_PORT
+		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]] && [[ "$VALUE" -ne "$NODE_PORT" ]]
 		then
 			break
 		fi
