@@ -1157,6 +1157,8 @@ function ask_node_location()
 		datacenter_state="ON"
 	elif [ "$NODE_LOCATION" == "residential" ]; then
 		residential_state="ON"
+	else
+		residential_state="ON"
 	fi
 	
 	# Ask for node location using whiptail
@@ -1164,16 +1166,12 @@ function ask_node_location()
 		"datacenter" "Your node is physically located in a datacenter" $datacenter_state \
 		"residential" "Your node is physically in a house" $residential_state 3>&1 1>&2 2>&3) || return 1;
 	
-	# Check if the user pressed Cancel
-	if [ $? -ne 0 ]; then
+	# Check if the user cancelled the dialog
+	if [ -z "$VALUE" ]
+	then
 		return 1
 	fi
-
-	# Check if the user entered a value
-	if [ -z "$VALUE" ]; then
-		return 2
-	fi
-
+	
 	# Set value received from whiptail to NODE_LOCATION
 	NODE_LOCATION=$VALUE
 	return 0;
@@ -1186,25 +1184,25 @@ function ask_node_type()
 	local wireguard_state="OFF"
 	local v2ray_state="OFF"
 
-	if [ "$NODE_TYPE" == "wireguard" ]; then
+	if [ "$NODE_TYPE" == "wireguard" ]
+	then
 		wireguard_state="ON"
-	elif [ "$NODE_TYPE" == "v2ray" ]; then
+	elif [ "$NODE_TYPE" == "v2ray" ]
+	then
 		v2ray_state="ON"
+	else
+		wireguard_state="ON"
 	fi
 
 	# Ask for node type using whiptail
 	local VALUE=$(whiptail --title "Node Type" --radiolist "Please select the type of node you want to run:" 15 78 2 \
 		"wireguard" "WireGuard" $wireguard_state \
 		"v2ray" "V2Ray" $v2ray_state 3>&1 1>&2 2>&3)
-
+	
 	# Check if the user pressed Cancel
-	if [ $? -ne 0 ]; then
+	if [ -z "$VALUE" ]
+	then
 		return 1
-	fi
-
-	# Check if the user entered a value
-	if [ -z "$VALUE" ]; then
-		return 2
 	fi
 
 	# Set value received from whiptail to NODE_TYPE
