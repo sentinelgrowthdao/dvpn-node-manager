@@ -56,6 +56,9 @@ CERTIFICATE_DATE_CREATION=""
 CERTIFICATE_DATE_EXPIRATION=""
 CERTIFICATE_ISSUER=""
 CERTIFICATE_SUBJECT=""
+FIREWALL_PREVIOUS_NODE_PORT=0
+FIREWALL_PREVIOUS_WIREGUARD_PORT=0
+FIREWALL_PREVIOUS_V2RAY_PORT=0
 
 # API URLs
 GROWTHDAO_API_BALANCE="https://api.sentinelgrowthdao.com/cosmos/bank/v1beta1/balances/"
@@ -1125,12 +1128,6 @@ function wallet_balance()
 # Function to open the firewall
 function firewall_configure()
 {
-	# Ask if user wants to configure the firewall
-	if ! whiptail --title "Firewall Configuration" --yesno "Do you want to configure the firewall to allow incoming connections to the node?\nBecarfule, old rules will not be deleted." 8 78
-	then
-		return 0;
-	fi
-	
 	# Check if UFW is not installed
 	if ! command -v ufw &> /dev/null
 	then
@@ -1153,19 +1150,43 @@ function firewall_configure()
 		fi
 	fi
 	
-	# Enable UFW
-	echo "y" | ufw enable > /dev/null 2>&1 || { output_error "Failed to enable UFW."; return 1; }
-	
-	# Allow Node port
-	if ! ufw status | grep -q "${NODE_PORT}/tcp"
+	# If UFW is not enabled
+	if ! ufw status | grep -q "Status: active"
 	then
-		ufw allow ${NODE_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow node port."; return 1; }
+		# Enable UFW
+		echo "y" | ufw enable > /dev/null 2>&1 || { output_error "Failed to enable UFW."; return 1; }
+	fi
+	
+	# If previous node port is not empty and different from 0
+	if [ ! -z "$FIREWALL_PREVIOUS_NODE_PORT" ] && [ "$FIREWALL_PREVIOUS_NODE_PORT" -ne 0 ]
+	then
+		firewall_delete_port $FIREWALL_PREVIOUS_NODE_PORT "tcp" || { output_error "Failed to delete previous node port."; return 1; }
+		FIREWALL_PREVIOUS_NODE_PORT=0;
+	fi
+	
+	# If node type is WireGuard and WireGuard port is not empty
+	if [ "$NODE_TYPE" = "wireguard" ] && [ ! -z "$WIREGUARD_PORT" ]
+	then
+		firewall_delete_port $FIREWALL_PREVIOUS_WIREGUARD_PORT "udp" || { output_error "Failed to delete previous WireGuard port."; return 1; }
+		FIREWALL_PREVIOUS_WIREGUARD_PORT=0;
+	fi
+	
+	# If node type is V2Ray and V2Ray port is not empty
+	if [ "$NODE_TYPE" = "v2ray" ] && [ ! -z "$V2RAY_PORT" ]
+	then
+		firewall_delete_port $FIREWALL_PREVIOUS_V2RAY_PORT "tcp" || { output_error "Failed to delete previous V2Ray port."; return 1; }
+		FIREWALL_PREVIOUS_V2RAY_PORT=0;
 	fi
 	
 	# Add ports to firewall
-	firewall_allow_node || { output_error "Failed to allow node port."; return 1; }
-	firewall_allow_wireguard || { output_error "Failed to allow WireGuard."; return 1; }
-	firewall_allow_v2ray || { output_error "Failed to allow V2Ray."; return 1; }
+	firewall_allow_port $NODE_PORT "tcp" || { output_error "Failed to allow node port."; return 1; }
+	if [ "$NODE_TYPE" = "wireguard" ]
+	then
+		firewall_allow_port $WIREGUARD_PORT "udp" || { output_error "Failed to allow WireGuard."; return 1; }
+	elif [ "$NODE_TYPE" = "v2ray" ]
+	then
+		firewall_allow_port $V2RAY_PORT "tcp" || { output_error "Failed to allow V2Ray."; return 1; }
+	fi
 	
 	# Reload UFW
 	ufw reload > /dev/null 2>&1 || { output_error "Failed to reload UFW."; return 1; }
@@ -1173,48 +1194,60 @@ function firewall_configure()
 	return 0;
 }
 
-# Function to add node port
-function firewall_allow_node()
+# Function to delete all firewall rules
+function firewall_reset()
 {
-	# Allow Node port if it is not empty
-	if [ ! -z "$NODE_PORT" ]
+	# If UFW is not installed, return 0
+	if ! command -v ufw &> /dev/null
 	then
-		# Allow Node port if not already allowed
-		if ! ufw status | grep -q "${NODE_PORT}/tcp"
+		return 0;
+	fi
+	
+	# Delete all firewall rules
+	firewall_delete_port $NODE_PORT "tcp" || { output_error "Failed to delete node port."; return 1; }
+	if [ "$NODE_TYPE" = "wireguard" ]
+	then
+		firewall_delete_port $WIREGUARD_PORT "udp" || { output_error "Failed to delete WireGuard."; return 1; }
+	elif [ "$NODE_TYPE" = "v2ray" ]
+	then
+		firewall_delete_port $V2RAY_PORT "tcp" || { output_error "Failed to delete V2Ray."; return 1; }
+	fi
+	
+	return 0;
+}
+
+# Function to allow firewall port
+function firewall_allow_port()
+{
+	local PORT=$1
+	local PROTOCOL=$2
+	# If port is not empty and is a number between 1024 and 65535
+	if [ ! -z "$PORT" ] && [[ "$PORT" =~ ^[0-9]+$ ]] && [[ "$PORT" -ge 1024 ]] && [[ "$PORT" -le 65535 ]]
+	then
+		# Allow port to firewall if not already allowed
+		if ! ufw status | grep -q "${PORT}/${PROTOCOL}"
 		then
-			ufw allow ${NODE_PORT}/tcp > /dev/null 2>&1 || return 1;
+			output_info "Allowing port ${PORT}/${PROTOCOL} in UFW"
+			ufw allow ${PORT}/${PROTOCOL} > /dev/null 2>&1 || return 1;
 		fi
 	fi
 	
 	return 0;
 }
 
-# Function to add wireguard port to firewall
-function firewall_allow_wireguard()
+# Function to delete firewall port
+function firewall_delete_port()
 {
-	# If node type is WireGuard and WireGuard port is not empty
-	if [ "$NODE_TYPE" = "wireguard" ] && [ ! -z "$WIREGUARD_PORT" ]
+	local PORT=$1
+	local PROTOCOL=$2
+	# If port is not empty and is a number between 1024 and 65535
+	if [ ! -z "$PORT" ] && [[ "$PORT" =~ ^[0-9]+$ ]] && [[ "$PORT" -ge 1024 ]] && [[ "$PORT" -le 65535 ]]
 	then
-		# Allow WireGuard if not already allowed
-		if ! ufw status | grep -q "${WIREGUARD_PORT}/udp"
+		# Delete port from firewall if the rule exists
+		if ufw status | grep -q "${PORT}/${PROTOCOL}"
 		then
-			ufw allow ${WIREGUARD_PORT}/udp > /dev/null 2>&1 || return 1;
-		fi
-	fi
-	
-	return 0;
-}
-
-# Function to add v2ray port to firewall
-function firewall_allow_v2ray()
-{
-	# If node type is V2Ray and V2Ray port is not empty
-	if [ "$NODE_TYPE" = "v2ray" ] && [ ! -z "$V2RAY_PORT" ]
-	then
-		# Allow V2Ray if not already allowed
-		if ! ufw status | grep -q "${V2RAY_PORT}/tcp"
-		then
-			ufw allow ${V2RAY_PORT}/tcp > /dev/null 2>&1 || return 1;
+			output_info "Deleting port ${PORT}/${PROTOCOL} in UFW"
+			ufw delete allow ${PORT}/${PROTOCOL} > /dev/null 2>&1 || return 1;
 		fi
 	fi
 	
@@ -1271,8 +1304,17 @@ function ask_node_port()
 		fi
 	done
 	
-	# Set value received from whiptail to NODE_PORT
-	NODE_PORT=$VALUE
+	# If VALUE is different of $NODE_PORT
+	if [ "$VALUE" -ne "$NODE_PORT" ]
+	then
+		# Store the value in FIREWALL_PREVIOUS_NODE_PORT to delete it from the firewall
+		FIREWALL_PREVIOUS_NODE_PORT=$NODE_PORT
+		# Set value received from whiptail to NODE_PORT
+		NODE_PORT=$VALUE
+	else
+		FIREWALL_PREVIOUS_NODE_PORT=0
+	fi
+	
 	return 0;
 }
 
@@ -1307,8 +1349,17 @@ function ask_wireguard_port()
 		fi
 	done
 	
-	# Set value received from whiptail to WIREGUARD_PORT
-	WIREGUARD_PORT=$VALUE
+	# If VALUE is different of $WIREGUARD_PORT
+	if [ "$VALUE" -ne "$WIREGUARD_PORT" ]
+	then
+		# Store the value in FIREWALL_PREVIOUS_WIREGUARD_PORT to delete it from the firewall
+		FIREWALL_PREVIOUS_WIREGUARD_PORT=$WIREGUARD_PORT
+		# Set value received from whiptail to WIREGUARD_PORT
+		WIREGUARD_PORT=$VALUE
+	else
+		FIREWALL_PREVIOUS_WIREGUARD_PORT=0
+	fi
+	
 	return 0;
 }
 
@@ -1329,8 +1380,32 @@ function ask_v2ray_port()
 		fi
 	done
 	
-	# Set value received from whiptail to V2RAY_PORT
-	V2RAY_PORT=$VALUE
+	# If VALUE is different of $V2RAY_PORT
+	if [ "$VALUE" -ne "$V2RAY_PORT" ]
+	then
+		# Store the value in FIREWALL_PREVIOUS_V2RAY_PORT to delete it from the firewall
+		FIREWALL_PREVIOUS_V2RAY_PORT=$V2RAY_PORT
+		# Set value received from whiptail to V2RAY_PORT
+		V2RAY_PORT=$VALUE
+	else
+		FIREWALL_PREVIOUS_V2RAY_PORT=0
+	fi
+	
+	return 0;
+}
+
+# Function to ask for configure firewall
+function ask_firewall_configure()
+{
+	local MESSAGE=$1
+	# Ask if user wants to configure the firewall
+	if ! whiptail --title "Firewall Configuration" --yesno "$MESSAGE" 8 78
+	then
+		return 0;
+	fi
+	
+	firewall_configure || return 1;
+	
 	return 0;
 }
 
@@ -1629,7 +1704,7 @@ function menu_installation()
 		# Refresh configuration files
 		refresh_config_files || return 1;
 		# If configuration has changed, ask user to configure the firewall
-		firewall_configure || return 1;
+		ask_firewall_configure "Do you want to automatically configure the firewall to allow incoming connections to the node?" || return 1;
 	fi
 	
 	# Loop to initialize the wallet
@@ -1796,7 +1871,7 @@ function menu_settings()
 			2)
 				if ask_remote_ip && ask_node_port && ask_vpn_port
 				then
-					firewall_configure || return 1;
+					ask_firewall_configure "Do you want to apply automatic port changes to the firewall?" || return 1;
 					refresh_config_files || return 1;
 					container_remove || return 1;
 					container_start || return 1;
@@ -1957,11 +2032,12 @@ function menu_actions()
 				fi
 				;;
 			"Wipe")
-				if whiptail --title "Confirm Container Removal" --defaultno --yesno "Are you sure you want to completely remove the dVPN node container, wallet, and configuration folder?" 8 78
+				if whiptail --title "Confirm Container Removal" --defaultno --yesno "Are you sure you want to completely delete the dVPN node container, wallet, firewall rules and configuration folder?" 8 78
 				then
 					# Remove the container, wallet, and configuration folder
 					container_remove
 					wallet_remove
+					firewall_reset
 					remove_config_files
 
 					# Ask user if they want to restart the installation or exit
