@@ -1504,7 +1504,21 @@ function menu_settings()
 {
 	while true;
 	do
-		CHOICE=$(whiptail --title "Settings" --menu "Choose a settings group to configure:" 15 60 5 \
+		local MESSAGE="Node Configuration:\n"
+		MESSAGE+="  - Moniker: ${NODE_MONIKER}\n"
+		MESSAGE+="  - Node Location: ${NODE_LOCATION}\n"
+		MESSAGE+="  - Remote IP: ${NODE_IP}\n"
+		MESSAGE+="  - Node Port: ${NODE_PORT}\n"
+		if [ "$NODE_TYPE" = "wireguard" ]
+		then
+			MESSAGE+="  - WireGuard Port: ${WIREGUARD_PORT}\n"
+		elif [ "$NODE_TYPE" = "v2ray" ]
+		then
+			MESSAGE+="  - V2Ray Port: ${V2RAY_PORT}\n"
+		fi
+		MESSAGE+="\nChoose a settings group to configure:"
+		
+		CHOICE=$(whiptail --title "Settings" --menu "${MESSAGE}" 20 60 5 \
 			"1" "Moniker" \
 			"2" "Network Settings" \
 			"3" "VPN Settings" \
