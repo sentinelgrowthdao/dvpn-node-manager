@@ -1562,6 +1562,8 @@ function menu_installation()
 	then
 		ask_remote_ip || { output_error "Failed to get node IP."; return 1; }
 		config_changed=true;
+		ask_node_port
+		ask_vpn_port
 	fi
 	
 	# If Configuration has changed then refresh configuration files
