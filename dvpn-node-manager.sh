@@ -400,78 +400,68 @@ function check_installation()
 	# If docker is not installed, return false
 	if ! command -v docker &> /dev/null
 	then
-		output_log "Docker is not installed."
+		output_info "Docker is not installed."
 		return 1
 	fi
 	
 	# If user is not in docker group, return false
 	if ! groups "$SUDO_USER" | grep -q "\bdocker\b"
 	then
-		output_log "User $SUDO_USER is not in the Docker group."
+		output_info "User $SUDO_USER is not in the Docker group."
 		return 1
 	fi
 	
 	# If sentinel docker image not installed, return false
 	if ! docker image inspect ${CONTAINER_NAME} &> /dev/null
 	then
-		output_log "Sentinel Docker image is not installed."
+		output_info "Sentinel Docker image is not installed."
 		return 1
 	fi
 	
 	# If sentinel config not generated, return false
 	if [ ! -f "${CONFIG_FILE}" ]
 	then
-		output_log "Sentinel config is not generated."
+		output_info "Sentinel config is not generated."
 		return 1
 	fi
 	
 	# If wireguard or v2ray config not generated, return false
 	if [ ! -f "${CONFIG_WIREGUARD}" ] && [ ! -f "${CONFIG_V2RAY}" ]
 	then
-		output_log "WireGuard and V2Ray config is not generated."
+		output_info "WireGuard and V2Ray config is not generated."
 		return 1
 	fi
 	
 	# If wallet does not exist, return false
 	if ! wallet_exist
 	then
-		output_log "Wallet does not exist."
+		output_info "Wallet does not exist."
 		return 1
 	fi
 	
 	# If container is not initialized, return false
 	if ! docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
 	then
-		output_log "dVPN node container is not initialized."
+		output_info "dVPN node container is not initialized."
 		return 1
 	fi
 	
 	return 0;
 }
 
-# Function to output log messages
-function output_log()
-{
-	if [ "$OUTPUT_DEBUG" = true ]; then
-		local message="$1"
-		echo -e "\e[34m${message}\e[0m"
-	fi
-}
-
 # Function to output information messages
 function output_info()
 {
 	local message="$1"
-	echo -e "\e[32m${message}\e[0m"
+	echo -e "\e[34m[INFO]\e[0m ${message}"
 }
 
 # Function to output error messages
 function output_error()
 {
 	local error="$1"
-	echo -e "\e[31m${error}\e[0m"
+	echo -e "\e[31m[ERROR]\e[0m ${error}"
 	whiptail --title "Error" --msgbox "${error}" 8 78
-	# exit 1
 }
 
 # Function to check if the OS is Ubuntu (Source: https://github.com/roomit-xyz/sentinel-node/blob/main/sentinel-node.sh)
@@ -747,7 +737,7 @@ function docker_usermod()
 	then
 		# Add the user to the docker group
 		usermod -aG docker ${USER_NAME} || { output_error "Failed to add user to docker group."; return 1; }
-		output_log "User added to docker group."
+		output_info "User added to docker group."
 	fi
 	
 	return 0;
@@ -928,11 +918,11 @@ function wallet_initialization()
 			# Delete existing wallet
 			wallet_remove
 		else
-			output_log "Wallet already exists."
+			output_info "Wallet already exists."
 			return 0;
 		fi
 	else
-		output_log "No wallet found."
+		output_info "No wallet found."
 	fi
 	
 	# Ask if user wants to restore wallet
@@ -1103,7 +1093,7 @@ function wallet_balance()
 	# If the value is empty, return 1
 	if [ -z "$API_RESPONSE" ]
 	then
-		output_log "API response is empty."
+		output_info "API response is empty."
 		return 1;
 	fi
 	
