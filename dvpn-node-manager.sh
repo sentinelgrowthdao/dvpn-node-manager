@@ -125,6 +125,7 @@ function load_config_files()
 		WIREGUARD_PORT=$V2RAY_PORT
 	fi
 	
+	output_success "Configuration files have been loaded."
 	return 0;
 }
 
@@ -157,6 +158,8 @@ function load_v2ray_config()
 # Function to refresh configuration files
 function refresh_config_files()
 {
+	output_info "Please wait while the configuration files are being refreshed..."
+	
 	# Update configuration
 	sed -i "s/moniker = .*/moniker = \"${NODE_MONIKER}\"/g" ${CONFIG_FILE} || { output_error "Failed to set moniker."; return 1; }
 	
@@ -220,6 +223,7 @@ function refresh_config_files()
 		sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${CONFIG_V2RAY} || { output_error "Failed to set V2Ray port."; return 1; }
 	fi
 	
+	output_success "Configuration files have been refreshed."
 	return 0;
 }
 
@@ -259,11 +263,12 @@ function generate_node_config()
 	if [ ! -f "${CONFIG_FILE}" ]
 	then
 		# Show waiting message
-		output_info "Please wait while the Sentinel configuration is being generated..."
+		output_info "Please wait while the dVPN node configuration is being generated..."
 		# Generate Sentinel config
 		docker run --rm \
 			--volume ${CONFIG_DIR}:/root/.sentinelnode \
 			${CONTAINER_NAME} process config init || { output_error "Failed to generate Sentinel configuration."; return 1; }
+		output_success "The dVPN node configuration has been generated."
 	fi
 	
 	return 0;
@@ -284,6 +289,8 @@ function generate_vpn_config()
 			docker run --rm \
 				--volume ${CONFIG_DIR}:/root/.sentinelnode \
 				${CONTAINER_NAME} process wireguard config init || { output_error "Failed to generate WireGuard configuration."; return 1; }
+			
+			output_success "WireGuard configuration has been generated."
 		fi
 	# If node type is v2ray
 	elif [ "$NODE_TYPE" == "v2ray" ]
@@ -297,6 +304,8 @@ function generate_vpn_config()
 			docker run --rm \
 				--volume ${CONFIG_DIR}:/root/.sentinelnode \
 				${CONTAINER_NAME} process v2ray config init || { output_error "Failed to generate V2Ray configuration."; return 1; }
+			
+			output_success "V2Ray configuration has been generated."
 		fi
 	else
 		output_error "Invalid node type."
@@ -313,12 +322,14 @@ function remove_vpn_config_files()
 	if [ -f "${CONFIG_WIREGUARD}" ]
 	then
 		rm -f ${CONFIG_WIREGUARD}
+		output_success "WireGuard configuration has been removed."
 	fi
 	
 	# If v2ray config exists, remove it
 	if [ -f "${CONFIG_V2RAY}" ]
 	then
 		rm -f ${CONFIG_V2RAY}
+		output_success "V2Ray configuration has been removed."
 	fi
 	
 	return 0;
@@ -336,6 +347,8 @@ function remove_config_files()
 	output_info "Please wait while the configuration files are being removed..."
 	# Remove configuration files
 	rm -rf ${CONFIG_DIR}
+	
+	output_success "Configuration files have been removed."
 	return 0;
 }
 
@@ -355,6 +368,7 @@ function update_container
 	# Display message indicating that the image is up to date
 	output_info "The dVPN node container has been updated."
 	whiptail --title "Update Complete" --msgbox "dVPN node container is up to date." 8 78
+	output_success "dVPN node container has been updated."
 	
 	return 0;
 }
@@ -368,14 +382,13 @@ function update_network
 		return 0;
 	fi
 	
-	output_info "Please wait while the Sentinel configuration is being updated..."
-	
 	# Load configuration from API
 	load_network_configuration || { output_error "Failed to load configuration from API."; return 1; }
 	refresh_config_files || return 1;
 	
 	# Display message indicating that the configuration is up to date
 	whiptail --title "Update Complete" --msgbox "Sentinel configuration is up to date." 8 78
+	output_success "Sentinel configuration has been updated."
 	
 	return 0;
 }
@@ -451,16 +464,24 @@ function check_installation()
 # Function to output information messages
 function output_info()
 {
-	local message="$1"
-	echo -e "\e[34m[INFO]\e[0m ${message}"
+	local MESSAGE="$1"
+	echo -e "\e[34m[INFO]\e[0m ${MESSAGE}"
+}
+
+# Function to output success messages
+function output_success()
+{
+	local MESSAGE="$1"
+	# Afficher "[SUCCESS]" en vert et le MESSAGE en couleur par défaut
+	echo -e "\e[32m[SUCCESS]\e[0m ${MESSAGE}"
 }
 
 # Function to output error messages
 function output_error()
 {
-	local error="$1"
-	echo -e "\e[31m[ERROR]\e[0m ${error}"
-	whiptail --title "Error" --msgbox "${error}" 8 78
+	local ERROR="$1"
+	echo -e "\e[31m[ERROR]\e[0m ${ERROR}"
+	whiptail --title "Error" --msgbox "${ERROR}" 8 78
 }
 
 # Function to check if the OS is Ubuntu (Source: https://github.com/roomit-xyz/sentinel-node/blob/main/sentinel-node.sh)
@@ -533,6 +554,7 @@ function certificate_generate()
 	chown root:root ${CONFIG_TLS_CRT} > /dev/null 2>&1 && \
 	chown root:root ${CONFIG_TLS_KEY} > /dev/null 2>&1 || { output_error "Failed to change ownership of certificate files."; return 1; }
 	
+	output_info "Certificate files have been generated."
 	return 0;
 }
 
@@ -575,6 +597,8 @@ function certificate_remove()
 	# Remove certificate files
 	rm -f ${CONFIG_TLS_CRT}
 	rm -f ${CONFIG_TLS_KEY}
+	
+	output_info "Certificate files have been removed."
 	return 0;
 }
 
@@ -788,6 +812,7 @@ function container_install()
 	docker pull ${IMAGE} || { output_error "Failed to pull the Sentinel image."; return 1; }
 	docker tag ${IMAGE} ${CONTAINER_NAME} || { output_error "Failed to tag the Sentinel image."; return 1; }
 	
+	output_success "Sentinel image has been installed successfully."
 	return 0;
 }
 
@@ -804,6 +829,7 @@ function container_start()
 		if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
 			# Container is not running, attempt to start it
 			docker start ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to start the dVPN node container."; return 1; }
+			output_success "dVPN node container has been started successfully."
 		fi
 		return 0
 	fi
@@ -844,6 +870,7 @@ function container_start()
 		return 1
 	fi
 	
+	output_success "dVPN node container has been started successfully."
 	return 0;
 }
 
@@ -852,6 +879,7 @@ function container_stop()
 {
 	output_info "Please wait while the dVPN node container is being stopped..."
 	docker stop ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to stop the dVPN node container."; return 1; }
+	output_success "dVPN node container has been stopped successfully."
 	return 0;
 }
 
@@ -860,6 +888,7 @@ function container_restart()
 {
 	output_info "Please wait while the dVPN node container is being restarted..."
 	docker restart ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to restart the dVPN node container."; return 1; }
+	output_success "dVPN node container has been restarted successfully."
 	return 0;
 }
 
@@ -889,6 +918,7 @@ function container_remove()
 	# Remove the container
 	output_info "Please wait while the dVPN node container is being removed..."
 	docker rm --force ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to remove the dVPN node container."; return 1; }
+	output_success "dVPN node container has been removed successfully."
 	
 	return 0;
 }
@@ -957,6 +987,8 @@ function wallet_initialization()
 			--interactive \
 			--volume ${CONFIG_DIR}:/root/.sentinelnode \
 			${CONTAINER_NAME} process keys add --recover > /dev/null 2>&1 || { output_error "Failed to restore wallet."; return 1; }
+		
+		output_success "Wallet restored successfully."
 	else
 		# Create new wallet
 		output_info "Creating new wallet, please wait..."
@@ -1006,9 +1038,9 @@ function wallet_initialization()
 		MESSAGE+="It's essential for recovering your wallet if you lose access or forget your password. Loss of this phrase means permanent loss of access to your funds and dVPN node. Store it privately and in multiple safe places.\n\n"
 		MESSAGE+="Mnemonic:\n\n${formatted_mnemonic}"
 		whiptail --title "Wallet Mnemonic" --msgbox "$MESSAGE" 22 80
+		
+		output_success "Wallet created successfully."
 	fi
-	
-	output_info "Wallet created successfully."
 	
 	return 0;
 }
@@ -1049,6 +1081,7 @@ function wallet_remove()
 		--volume ${CONFIG_DIR}:/root/.sentinelnode \
 		${CONTAINER_NAME} process keys delete $WALLET_NAME || { output_error "Failed to delete wallet."; return 1; }
 	
+	output_success "Wallet has been removed successfully."
 	return 0;
 }
 
@@ -1079,6 +1112,7 @@ function wallet_addresses()
 	PUBLIC_ADDRESS=$(echo "$PUBLIC_ADDRESS" | tr -d '\r')
 	NODE_ADDRESS=$(echo "$NODE_ADDRESS" | tr -d '\r')
 	
+	output_success "Wallet addresses have been retrieved successfully."
 	return 0;
 }
 
@@ -1113,6 +1147,7 @@ function wallet_balance()
 		WALLET_BALANCE="${WALLET_BALANCE_AMOUNT} ${WALLET_BALANCE_DENOM}"
 	fi
 	
+	output_success "Wallet balance has been retrieved successfully."
 	return 0;
 }
 
@@ -1223,8 +1258,8 @@ function firewall_allow_port()
 		# Allow port to firewall if not already allowed
 		if ! ufw status | grep -q "${PORT}/${PROTOCOL}"
 		then
-			output_info "Allowing port ${PORT}/${PROTOCOL} in UFW"
 			ufw allow ${PORT}/${PROTOCOL} > /dev/null 2>&1 || return 1;
+			output_success "Allowing port ${PORT}/${PROTOCOL} in UFW"
 		fi
 	fi
 	
@@ -1242,8 +1277,8 @@ function firewall_delete_port()
 		# Delete port from firewall if the rule exists
 		if ufw status | grep -q "${PORT}/${PROTOCOL}"
 		then
-			output_info "Deleting port ${PORT}/${PROTOCOL} in UFW"
 			ufw delete allow ${PORT}/${PROTOCOL} > /dev/null 2>&1 || return 1;
+			output_success "Deleting port ${PORT}/${PROTOCOL} in UFW"
 		fi
 	fi
 	
@@ -1555,11 +1590,11 @@ function message_docker_reboot_required()
 	# Display message to inform about Docker installation and reboot requirement
 	if whiptail --title "Docker Installation Complete" --yesno "Docker has been successfully installed on your system. For the installation to take full effect, a system reboot is required. Please select 'Reboot Now' to restart your system immediately, or choose 'Quit Without Reboot' if you prefer to reboot later at your own convenience." 12 78 --yes-button "Reboot Now" --no-button "Quit Without Reboot"; then
 		# Reboot the system
-		echo "Rebooting now..."
+		output_info "Rebooting now... Please run the script again after the system has restarted."
 		reboot
 	else
 		# Quit without rebooting
-		echo "Installation complete. Please reboot your system before continuing."
+		output_success "Installation complete. Please reboot your system before continuing."
 		exit 0
 	fi
 }
@@ -1771,7 +1806,8 @@ function menu_installation()
 	# Get local IP address
 	local LOCAL_IP=$(ip addr show wlan0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
 	# Display message indicating that the node has been successfully installed and started
-	whiptail --title "Installation Complete" --msgbox "The Sentinel node has been successfully installed and started!\n\nAccess the node dashboard at:\nLocal network: https://${LOCAL_IP}:${NODE_PORT}/status\nFrom anywhere: https://${NODE_IP}:${NODE_PORT}/status" 12 100
+	whiptail --title "Installation Complete" --msgbox "The dVPN node has been successfully installed and started!\n\nAccess the node dashboard at:\nLocal network: https://${LOCAL_IP}:${NODE_PORT}/status\nFrom anywhere: https://${NODE_IP}:${NODE_PORT}/status" 12 100
+	output_success "The dVPN node has been successfully installed and started!"
 	
 	return 0;
 }
@@ -1958,7 +1994,8 @@ function menu_certificate()
 				fi
 				
 				# Display message indicating that the certificate has been renewed
-				whiptail --title "Certificate Renewal" --msgbox "Certificate has been renewed." 8 78
+				whiptail --title "Certificate Renewal" --msgbox "Certificate has been renewed successfully." 8 78
+				output_success "Certificate has been renewed successfully."
 			fi
 		else
 			break
@@ -2137,7 +2174,7 @@ echo "Script Version: ${INSTALLER_VERSION}"
 
 # Check if the script is executed with sudo permissions
 if [ "$(id -u)" != "0" ]; then
-	echo "This script must be run with sudo permissions"
+	echo -e "\e[31m[ERROR]\e[0m This script must be run with sudo permissions"
 	exit 1
 fi
 
@@ -2179,10 +2216,11 @@ then
 	remove_config_files || exit 1;
 	
 	# Remove the Sentinel node directory
-	rm -rf ${CONFIG_DIR} || { output_error "Failed to remove Sentinel node directory."; exit 1; }
+	rm -rf ${CONFIG_DIR} || { output_error "Failed to remove dVPN node directory."; exit 1; }
 	
-	# Display message indicating that the Sentinel node has been removed
-	whiptail --title "Uninstallation Complete" --msgbox "The Sentinel node has been successfully removed." 8 78
+	# Display message indicating that the dVPN node directory has been removed
+	output_success "The dVPN node directory has been successfully removed."
+	whiptail --title "Uninstallation Complete" --msgbox "The dVPN node directory has been successfully removed." 8 78
 	
 	# Exit the script
 	exit 0
@@ -2214,12 +2252,12 @@ then
 		exit 1
 	fi
 	container_stop || exit 1;
-	output_info "The dVPN node container has been successfully stopped."
+	output_success "The dVPN node container has been successfully stopped."
 	whiptail --title "Stop Complete" --msgbox "The dVPN node container has been successfully stopped." 8 78
 elif [ "$1" == "restart" ]
 then
 	container_restart || exit 1;
-	output_info "The dVPN node container has been successfully restarted."
+	output_success "The dVPN node container has been successfully restarted."
 	whiptail --title "Restart Complete" --msgbox "The dVPN node container has been successfully restarted." 8 78
 elif [ "$1" == "status" ]
 then
@@ -2242,7 +2280,8 @@ then
 	load_config_files || exit 1;
 	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
 	network_check_port || exit 1;
-	whiptail --title "Port check" --msgbox "The node is accessible from the Internet." 8 78
+	whiptail --title "Port check" --msgbox "Congratulations! Your node is accessible from the Internet." 8 78
+	output_success "Congratulations! The node is accessible from the Internet."
 elif [ "$1" == "help" ]
 then
 	echo "This command is used to set up, configure and manage a dVPN node."
