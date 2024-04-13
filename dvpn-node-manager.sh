@@ -973,7 +973,7 @@ function wallet_addresses()
 function wallet_balance()
 {
 	# Show waiting message
-	output_info "Please wait while the wallet balance is being retrieved..."
+	output_info "Please wait while the balance of ${PUBLIC_ADDRESS} is being retrieved..."
 	
 	# Get wallet balance from remote API
 	local API_RESPONSE=$(curl -s "${GROWTHDAO_API_BALANCE}${PUBLIC_ADDRESS}")
@@ -993,7 +993,7 @@ function wallet_balance()
 	# Set the value and extract the amount and denom
 	local DVPN_OBJECT=$(echo "$API_RESPONSE" | jq -r '.balances[] | select(.denom == "udvpn")')
 	# If the value is not empty then extract the amount
-	if [ -z "$DVPN_OBJECT" ]
+	if [ ! -z "$DVPN_OBJECT" ]
 	then
 		# Set the values
 		WALLET_BALANCE_AMOUNT=$(echo "$DVPN_OBJECT" | jq -r '.amount | tonumber / 1000000')
