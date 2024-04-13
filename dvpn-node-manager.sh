@@ -2110,6 +2110,23 @@ then
 	load_config_files || exit 1;
 	network_check_port || exit 1;
 	whiptail --title "Port check" --msgbox "The node is accessible from the Internet." 8 78
+elif [ "$1" == "help" ]
+then
+	echo "This command sets up and configures a dVPN node."
+	echo "Usage: $(basename $0) [option]"
+	echo ""
+	echo "Options:"
+	echo "  start       Start the Sentinel node"
+	echo "  stop        Stop the Sentinel node"
+	echo "  restart     Restart the Sentinel node"
+	echo "  status      Display the Sentinel node status"
+	echo "  log         Display the Sentinel node logs"
+	echo "  check-port  Check if the node is accessible from the Internet"
+	echo "  update      Update the Sentinel node"
+	echo "  uninstall   Remove the Sentinel node"
+	echo "  about       Display system and software details"
+	echo "  help        Display this help message"
+	exit 0
 else
 	while true
 	do
