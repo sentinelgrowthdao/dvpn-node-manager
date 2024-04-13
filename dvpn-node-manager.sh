@@ -2073,6 +2073,16 @@ then
 	container_start || exit 1;
 	output_info "The dVPN node container has been successfully started."
 	whiptail --title "Start Complete" --msgbox "The dVPN node container has been successfully started." 8 78
+elif [ "$1" == "stop" ]
+then
+	if ! container_running
+	then
+		output_error "The dVPN node container is already stopped."
+		exit 1
+	fi
+	container_stop || exit 1;
+	output_info "The dVPN node container has been successfully stopped."
+	whiptail --title "Stop Complete" --msgbox "The dVPN node container has been successfully stopped." 8 78
 else
 	while true
 	do
