@@ -418,8 +418,8 @@ function os_ubuntu()
 # Function to check if the OS is Raspbian (Source: https://github.com/roomit-xyz/sentinel-node/blob/main/sentinel-node.sh)
 function os_raspbian()
 {
-	raspbian_check=$(cat /etc/*-release | grep "ID=raspbian" | wc -l)
-	arm_check=$(uname -a | egrep "aarch64|arm64|armv7" | wc -l)
+	local raspbian_check=$(cat /etc/*-release | grep "ID=raspbian" | wc -l)
+	local arm_check=$(uname -a | egrep "aarch64|arm64|armv7" | wc -l)
 	if [ ${raspbian_check} == 1 ] || [ ${arm_check} == 1 ]
 	then
 		return 0  
