@@ -304,7 +304,8 @@ function remove_config_files()
 	then
 		return 0;
 	fi
-
+	
+	output_info "Please wait while the configuration files are being removed..."
 	# Remove configuration files
 	rm -rf ${CONFIG_DIR}
 	return 0;
