@@ -341,17 +341,10 @@ function check_installation()
 		return 1
 	fi
 	
-	# If wireguard config not generated, return false
-	if [ ! -f "${USER_HOME}/.sentinelnode/wireguard.toml" ]
+	# If wireguard or v2ray config not generated, return false
+	if [ ! -f "${USER_HOME}/.sentinelnode/wireguard.toml" ] || [ ! -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
 	then
-		output_log "WireGuard config is not generated."
-		return 1
-	fi
-	
-	# If v2ray config not generated, return false
-	if [ ! -f "${USER_HOME}/.sentinelnode/v2ray.toml" ]
-	then
-		output_log "V2Ray config is not generated."
+		output_log "WireGuard and V2Ray config is not generated."
 		return 1
 	fi
 	
