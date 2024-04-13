@@ -2105,6 +2105,11 @@ then
 elif [ "$1" == "about" ]
 then
 	menu_about || exit 1;
+elif [ "$1" == "check-port" ]
+then
+	load_config_files || exit 1;
+	network_check_port || exit 1;
+	whiptail --title "Port check" --msgbox "The node is accessible from the Internet." 8 78
 else
 	while true
 	do
