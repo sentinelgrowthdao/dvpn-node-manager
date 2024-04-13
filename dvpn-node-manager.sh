@@ -494,6 +494,22 @@ function certificate_info()
 	return 0
 }
 
+# Function to remove certificate files
+function certificate_remove()
+{
+	# If certificate files do not exist, return 0
+	if [ ! -f "${USER_HOME}/.sentinelnode/tls.crt" ] && [ ! -f "${USER_HOME}/.sentinelnode/tls.key" ]
+	then
+		return 0;
+	fi
+	
+	# Remove certificate files
+	rm -f ${USER_HOME}/.sentinelnode/tls.crt
+	rm -f ${USER_HOME}/.sentinelnode/tls.key
+	return 0;
+}
+
+
 ####################################################################################################
 # Network functions
 ####################################################################################################
