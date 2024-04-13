@@ -922,7 +922,7 @@ function wallet_initialization()
 		echo "$MNEMONIC" | docker run --rm \
 			--interactive \
 			--volume ${CONFIG_DIR}:/root/.sentinelnode \
-			${CONTAINER_NAME} process keys add --recover || { output_error "Failed to restore wallet."; return 1; }
+			${CONTAINER_NAME} process keys add --recover > /dev/null 2>&1 || { output_error "Failed to restore wallet."; return 1; }
 	else
 		# Create new wallet
 		output_info "Creating new wallet, please wait..."
