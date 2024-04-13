@@ -398,13 +398,13 @@ function output_error()
 function os_ubuntu()
 {
 	# Check if the OS is Ubuntu
-	os_name=$(lsb_release -is)
+	local os_name=$(lsb_release -is)
 	if [[ "$os_name" != "Ubuntu" ]]
 	then
 		return 1
 	fi
 
-	version=$(lsb_release -rs)
+	local version=$(lsb_release -rs)
 	if [[ "$version" == "18."* || "$version" == "19."* || "$version" == "20."* || \
 		"$version" == "21."* || "$version" == "22."* || "$version" == "23."* || \
 		"$version" == "24."* ]]
