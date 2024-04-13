@@ -1270,10 +1270,20 @@ function ask_moniker()
 # Function to display a message to wait for funds
 function message_wait_funds()
 {
+	# Get parameter balance checked
+	local BALANCE_CHECKED=$1
+	
+	# Define message based on balance checked
+	local MESSAGE="Please send at least 10 \$DVPN to the following address before continuing and starting the node:\n\n${PUBLIC_ADDRESS}\n\nPress 'Done' to check and continue or 'Quit' to exit."
+	if [ "$BALANCE_CHECKED" = true ]
+	then
+		MESSAGE="The address seems to have ${WALLET_BALANCE}. Please send at least 10 DVPN to the following address before continuing and starting the node:\n\n${PUBLIC_ADDRESS}\n\nPress 'Done' to check again or 'Quit' to exit."
+	fi
+	
 	# Display message to wait for funds and allow user to choose to quit or continue
 	if whiptail --title "Funds Required" \
 		--yes-button "Done" --no-button "Quit" \
-		--yesno "Please send at least 50 \$DVPN to the following address before continuing and starting the node:\n\n${PUBLIC_ADDRESS}\n\nPress 'Yes' to wait or 'No' to quit." 10 78; then
+		--yesno "$MESSAGE" 12 78; then
 		return 0
 	else
 		return 1
@@ -1429,16 +1439,20 @@ function menu_installation()
 		fi
 	done
 	
+	# Variable to change waiting message
+	local BALANCE_CHECKED=false;
 	# Loop to wait for funds
 	while true;
 	do
 		# Get wallet balance
-		wallet_balance || { output_error "Failed to get wallet balance."; return 1; }
+		wallet_balance || { output_error "Failed to get wallet balance from the API."; return 1; }
 		
 		# If the wallet balance is empty or less than 1 DVPN, display a message to wait for funds
-		if [ -z "$WALLET_BALANCE_AMOUNT" ] || [ "${WALLET_BALANCE_AMOUNT%.*}" -lt 1 ]
+		if [ -z "$WALLET_BALANCE_AMOUNT" ] || [ "${WALLET_BALANCE_AMOUNT%.*}" -lt 10 ]
 		then
-			message_wait_funds || exit 1;
+			# Display message wallet balance is empty
+			message_wait_funds $BALANCE_CHECKED || exit 1;
+			BALANCE_CHECKED=true;
 		else
 			break
 		fi
