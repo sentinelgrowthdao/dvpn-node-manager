@@ -1546,10 +1546,15 @@ function menu_installation()
 	then
 		output_error "Failed to start the dVPN node container."
 		return 1
-	else
-		# Display message indicating that the node has been successfully installed and started
-		whiptail --title "Installation Complete" --msgbox "The Sentinel node has been successfully installed and started!\nYou can now access the node dashboard by visiting the following URL:\n\nhttps://${NODE_IP}:${NODE_PORT}/status" 12 100
 	fi
+	
+	# Check if the node is accessible from the Internet
+	network_check_port || return 1;
+	
+	# Get local IP address
+	local LOCAL_IP=$(ip addr show wlan0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
+	# Display message indicating that the node has been successfully installed and started
+	whiptail --title "Installation Complete" --msgbox "The Sentinel node has been successfully installed and started!\n\nAccess the node dashboard at:\nLocal network: https://${LOCAL_IP}:${NODE_PORT}/status\nFrom anywhere: https://${NODE_IP}:${NODE_PORT}/status" 12 100
 	
 	return 0;
 }
