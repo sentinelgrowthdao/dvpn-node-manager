@@ -2233,6 +2233,7 @@ then
 elif [ "$1" == "check-port" ]
 then
 	load_config_files || exit 1;
+	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
 	network_check_port || exit 1;
 	whiptail --title "Port check" --msgbox "The node is accessible from the Internet." 8 78
 elif [ "$1" == "help" ]
