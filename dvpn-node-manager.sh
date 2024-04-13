@@ -1718,8 +1718,8 @@ function menu_settings()
 			"1" "Moniker" \
 			"2" "Network Settings" \
 			"3" "VPN Settings" \
-			"5" "Gigabyte Prices" \
-			"6" "Hourly Prices" \
+			"4" "Gigabyte Prices" \
+			"5" "Hourly Prices" \
 			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3)
 		
 		# If user chooses 'Back', break the loop to return to previous menu
@@ -1760,10 +1760,10 @@ function menu_settings()
 					whiptail --title "Settings Updated" --msgbox "VPN settings have been updated." 8 78
 				fi
 				;;
-			5)
+			4)
 				message_gigabyte_prices
 				;;
-			6)
+			5)
 				message_hourly_prices
 				;;
 		esac
