@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # Installer version
-SCRIPT_VERSION="alpha-0.1.0"
+INSTALLER_VERSION="1.0.0"
+# Sentinel documentation Url
+DOCS_URL="https://docs.sentinel.co/"
 
 # User and home directory
 USER_NAME=${SUDO_USER:-$(whoami)}
@@ -1468,14 +1470,15 @@ function menu_configuration()
 	# Load wallet addresses
 	wallet_addresses || { output_error "Failed to get public address, wallet seems to be corrupted."; return 1; }
 
-	CHOICE=$(whiptail --title "dVPN Node Manager" --menu "Welcome to the dVPN node configuration process.\n\nPlease select an option:" 15 78 5 \
+	CHOICE=$(whiptail --title "dVPN Node Manager" --menu "Welcome to the dVPN node configuration process.\n\nPlease select an option:" 16 78 6 \
 		"Settings" "Modify node settings" \
 		"Wallet" "Access wallet details" \
 		"Certificate" "Access certificate details" \
 		"Actions" "Manage node operations" \
 		"Update" "Apply node updates" \
+		"About" "View system and software details" \
 		--ok-button "Select" --cancel-button "Finish" 3>&1 1>&2 2>&3)
-
+	
 	if [ $? -eq 1 ]; then  # Check if the user pressed the 'Finish' button, which is the cancel button now
 		exit 0
 	fi
@@ -1496,6 +1499,9 @@ function menu_configuration()
 			;;
 		"Update")
 			menu_update
+			;;
+		"About")
+			menu_about
 			;;
 	esac
 }
@@ -1781,6 +1787,25 @@ function menu_update()
 	return 0;
 }
 
+# Function to display the about menu
+function menu_about()
+{
+	# Get the current Node version
+	local NODE_VERSION=$(docker run --rm --tty ${CONTAINER_NAME} process version | tr -d '\r')
+	
+	# Display the about menu using whiptail
+	whiptail --title "About" --msgbox "
+	Server Model: $(dmidecode -s system-product-name)
+	Operating System: $(lsb_release -is) $(lsb_release -rs)
+	Kernel Version: $(uname -r)
+	Architecture: $(uname -m)
+	Installer Version: ${INSTALLER_VERSION}
+	Node Version: ${NODE_VERSION}
+	Docs URL: ${DOCS_URL}" 15 60
+
+	return 0;
+}
+
 ####################################################################################################
 # Main function
 ####################################################################################################
@@ -1802,10 +1827,11 @@ echo "--------------------------------------"
 echo ""
 echo "Welcome to the Sentinel dVPN Node Manager!"
 echo "This tool will assist you in installing, configuring, and managing your dVPN node."
-echo "Operating System: $(uname -o)"
+echo "Here are your system's technical specifications:"
+echo "Operating System: $(lsb_release -is) $(lsb_release -rs)"
 echo "Kernel Version: $(uname -r)"
 echo "Architecture: $(uname -m)"
-echo "Script version: ${SCRIPT_VERSION}"
+echo "Installer version: ${INSTALLER_VERSION}"
 echo -e ""
 
 # Check if the script is executed with sudo permissions
