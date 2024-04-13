@@ -509,6 +509,17 @@ function certificate_remove()
 	return 0;
 }
 
+# Function to renew the certificate
+function certificate_renew()
+{
+	# Remove the existing certificate
+	certificate_remove || return 1;
+	
+	# Generate a new certificate
+	certificate_generate || return 1;
+	
+	return 0;
+}
 
 ####################################################################################################
 # Network functions
