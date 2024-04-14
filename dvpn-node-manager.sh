@@ -58,6 +58,7 @@ CERTIFICATE_SUBJECT=""
 FIREWALL_PREVIOUS_NODE_PORT=0
 FIREWALL_PREVIOUS_WIREGUARD_PORT=0
 FIREWALL_PREVIOUS_V2RAY_PORT=0
+FIREWALL_PREVIOUS_NODE_TYPE=""
 
 # API URLs
 GROWTHDAO_API_BALANCE="https://api.sentinelgrowthdao.com/cosmos/bank/v1beta1/balances/"
@@ -126,6 +127,24 @@ function load_config_files()
 	fi
 	
 	output_success "Configuration files have been loaded."
+	return 0;
+}
+
+# Function to load vpn configuration files
+function load_vpn_config()
+{
+	# Load random port for WireGuard or V2Ray
+	if [ "$NODE_TYPE" == "wireguard" ]
+	then
+		load_wireguard_config
+	elif [ "$NODE_TYPE" == "v2ray" ]
+	then
+		load_v2ray_config
+	else
+		output_error "Invalid node type."
+		return 1
+	fi
+	
 	return 0;
 }
 
@@ -1222,6 +1241,24 @@ function firewall_configure()
 		FIREWALL_PREVIOUS_V2RAY_PORT=0;
 	fi
 	
+	# If previous node type is not empty and types are different
+	if [ ! -z "$FIREWALL_PREVIOUS_NODE_TYPE" ] && [ "$FIREWALL_PREVIOUS_NODE_TYPE" != "$NODE_TYPE" ]
+	then
+		# If previous node type is WireGuard
+		if [ "$FIREWALL_PREVIOUS_NODE_TYPE" = "wireguard" ]
+		then
+			firewall_delete_port $WIREGUARD_PORT "udp" || { output_error "Failed to delete previous WireGuard port."; return 1; }
+			FIREWALL_PREVIOUS_WIREGUARD_PORT=0;
+		# If previous node type is V2Ray
+		elif [ "$FIREWALL_PREVIOUS_NODE_TYPE" = "v2ray" ]
+		then
+			firewall_delete_port $V2RAY_PORT "tcp" || { output_error "Failed to delete previous V2Ray port."; return 1; }
+			FIREWALL_PREVIOUS_V2RAY_PORT=0;
+		fi
+	fi
+	# Delete the previous node type value as the information is no longer useful
+	FIREWALL_PREVIOUS_NODE_TYPE="";
+	
 	# Add ports to firewall
 	firewall_allow_port $NODE_PORT "tcp" || { output_error "Failed to allow node port."; return 1; }
 	if [ "$NODE_TYPE" = "wireguard" ]
@@ -1512,7 +1549,9 @@ function ask_node_type()
 	then
 		return 1
 	fi
-
+	
+	# Remember previous node type to update firewall configuration
+	FIREWALL_PREVIOUS_NODE_TYPE=$NODE_TYPE
 	# Set value received from whiptail to NODE_TYPE
 	NODE_TYPE=$VALUE
 
@@ -1722,14 +1761,8 @@ function menu_installation()
 		
 		# Generate WireGuard or V2Ray configurations
 		generate_vpn_config || { output_error "Failed to generate vpn configuration."; return 1; }
-		# Load random port for WireGuard or V2Ray
-		if [ "$NODE_TYPE" == "wireguard" ]
-		then
-			load_wireguard_config
-		elif [ "$NODE_TYPE" == "v2ray" ]
-		then
-			load_v2ray_config
-		fi
+		# Load VPN configuration into variables
+		load_vpn_config || { output_error "Failed to load vpn configuration."; return 1; }
 	fi
 	
 	# If Remote IP is empty, ask for Remote IP
@@ -1949,6 +1982,7 @@ function menu_settings()
 					generate_vpn_config || return 1;
 					refresh_config_files || return 1;
 					container_restart || return 1;
+					firewall_configure || return 1;
 					# Display message indicating that the settings have been updated
 					whiptail --title "Settings Updated" --msgbox "VPN settings have been updated." 8 78
 				fi
