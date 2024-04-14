@@ -1,0 +1,9 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	dh_auto_install
+	# Installation du script
+	install -D -m755 ../dvpn-node-manager.sh $(CURDIR)/debian/dvpn-node-manager/usr/bin/dvpn-node-manager

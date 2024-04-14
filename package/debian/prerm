@@ -1,0 +1,32 @@
+#!/bin/sh
+set -e
+
+# Environment variables
+USER_NAME=${SUDO_USER:-$(whoami)}
+USER_HOME=$(getent passwd ${USER_NAME} | cut -d: -f6)
+CONFIG_DIR="${USER_HOME}/.sentinelnode"
+IMAGE_NAME="sentinel-dvpn-node"
+CONTAINER_NAME="sentinel-dvpn-node"
+
+# Stop any running container that uses the image
+if docker ps -q --filter "name=$CONTAINER_NAME" | grep -q .; then
+	docker stop $CONTAINER_NAME > /dev/null 2>&1
+fi
+
+# Remove the container if exists
+docker rm --force $CONTAINER_NAME > /dev/null 2>&1 || {
+	echo -e "\e[31m[ERROR]\e[0m Failed to remove the dVPN node container."
+	exit 1
+}
+
+# Remove the Docker image
+docker rmi $IMAGE_NAME > /dev/null 2>&1 || {
+	echo -e "\e[31m[ERROR]\e[0m Failed to remove the dVPN node image."
+	exit 1
+}
+
+# Remove the configuration directory
+rm -rf $CONFIG_DIR > /dev/null 2>&1 || {
+	echo -e "\e[31m[ERROR]\e[0m Failed to remove the dVPN node configuration directory."
+	exit 1
+}

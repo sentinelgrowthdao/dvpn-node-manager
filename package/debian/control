@@ -1,0 +1,18 @@
+Source: dvpn-node-manager
+Section: net
+Priority: optional
+Maintainer: FoxinouFr <foxinou@foxinodes.net>
+Build-Depends: debhelper (>= 11), dh-exec
+Standards-Version: 4.1.4
+Homepage: https://github.com/Foxinodes/dvpn-node-manager
+
+Package: dvpn-node-manager
+Architecture: all
+Depends: whiptail, jq, curl, openssl, git, docker.io, ${misc:Depends}
+Description: Sentinel dVPN node manager script
+  This package provides a management script for installing, configuring,
+  and managing Sentinel dVPN nodes. It simplifies tasks such as starting,
+  stopping, and monitoring the node. It also includes functionality for
+  managing Docker containers and checking port accessibility.
+  The script supports various management commands and handles Docker
+  installations and node updates.
