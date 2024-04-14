@@ -1197,6 +1197,7 @@ function firewall_configure()
 	if ! ufw status | grep -q "Status: active"
 	then
 		# Enable UFW
+		output_info "Enabling UFW, please wait..."
 		echo "y" | ufw enable > /dev/null 2>&1 || { output_error "Failed to enable UFW."; return 1; }
 	fi
 	
@@ -1232,6 +1233,7 @@ function firewall_configure()
 	fi
 	
 	# Reload UFW
+	output_log "Reloading UFW, please wait..."
 	ufw reload > /dev/null 2>&1 || { output_error "Failed to reload UFW."; return 1; }
 	
 	return 0;
