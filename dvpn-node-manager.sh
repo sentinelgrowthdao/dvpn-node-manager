@@ -2056,7 +2056,7 @@ function menu_actions()
 					else
 						exit 0
 					fi
-
+					
 					# Exit to restart installation
 					return 0
 				fi
@@ -2065,8 +2065,8 @@ function menu_actions()
 				if whiptail --title "Confirm Container Removal" --defaultno --yesno "Are you sure you want to completely delete the dVPN node container, wallet, firewall rules and configuration folder?" 8 78
 				then
 					# Remove the container, wallet, and configuration folder
-					container_remove
 					wallet_remove
+					container_remove
 					firewall_reset
 					remove_config_files
 
