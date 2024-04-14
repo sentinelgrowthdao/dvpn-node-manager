@@ -660,49 +660,64 @@ function network_check_port()
 		return 1
 	fi
 	
-	# Show waiting message
-	output_info "Please wait while $NODE_PORT is checked to open on $NODE_IP...".
+	local MESSAGE=""
+	local RESPONSE=""
 	
-	# Request GET to Foxinodes API
-	local RESPONSE=$(curl -s "${FOXINODES_API_CHECK_PORT}${NODE_IP}:${NODE_PORT}")
-	
-	# If the request failed, return error
-	if [ $? -ne 0 ]
-	then
-		output_error "Error requesting Foxinodes API, please try again later by executing the following command: bash dvpn-node-manager.sh check-port"
-		return 1
-	fi
-	
-	# Parse JSON response
-	local RQ_ERROR=$(echo "$RESPONSE" | jq -r '.error')
-	local RQ_NODE_SUCCESS=$(echo "$RESPONSE" | jq -r '.node.success')
-	local RQ_NODE_ADDRESS=$(echo "$RESPONSE" | jq -r '.node.result.address')
-	
-	# Handle case where attribute is not available
-	if [ -z "$RQ_ERROR" ] || [ -z "$RQ_NODE_SUCCESS" ] || [ -z "$RQ_NODE_ADDRESS" ]
-	then
-		output_error "Error parsing JSON response. The API is down or this script is outdated."
-		return 2
-	# If the success is not true, return 1
-	elif [ "$RQ_ERROR" == "true" ]
-	then
-		# If message is not empty, display it
-		local RQ_MESSAGE=$(echo "$RESPONSE" | jq -r '.message')
-		if [ ! -z "$RQ_MESSAGE" ]
+	while true
+	do
+		# Show waiting message
+		output_info "Please wait while $NODE_PORT is checked to open on $NODE_IP..."
+		
+		# Reset values (empty message say that the port is open)
+		MESSAGE=""
+		# Request GET to Foxinodes API
+		RESPONSE=$(curl -s "${FOXINODES_API_CHECK_PORT}${NODE_IP}:${NODE_PORT}")
+		
+		# If the request failed, return error
+		if [ $? -ne 0 ]
 		then
-			output_error "$RQ_MESSAGE"
-		else
-			output_error "An unknow error occurred while checking the port."
+			MESSAGE="Error requesting Foxinodes API, please try again later by executing the following command: bash dvpn-node-manager.sh check-port"
 		fi
-		return 3;
-	fi
-	
-	# Check if the node address is the same as the one we are checking
-	if [ "$RQ_NODE_ADDRESS" != "$NODE_ADDRESS" ]
-	then
-		output_error "Node address $RQ_NODE_ADDRESS is different from the one we are checking $NODE_ADDRESS"
-		return 4
-	fi
+		
+		# Parse JSON response
+		local RQ_ERROR=$(echo "$RESPONSE" | jq -r '.error')
+		local RQ_NODE_SUCCESS=$(echo "$RESPONSE" | jq -r '.node.success')
+		local RQ_NODE_ADDRESS=$(echo "$RESPONSE" | jq -r '.node.result.address')
+		
+		# Handle case where attribute is not available
+		if [ -z "$RQ_ERROR" ] || [ -z "$RQ_NODE_SUCCESS" ] || [ -z "$RQ_NODE_ADDRESS" ]
+		then
+			MESSAGE="Error parsing JSON response. The API is down or this script is outdated."
+		# If the success is not true, return 1
+		elif [ "$RQ_ERROR" == "true" ]
+		then
+			# If message is not empty, display it
+			local RQ_MESSAGE=$(echo "$RESPONSE" | jq -r '.message')
+			if [ ! -z "$RQ_MESSAGE" ]
+			then
+				MESSAGE="$RQ_MESSAGE"
+			else
+				MESSAGE="An unknown error occurred while checking the port."
+			fi
+		# Check if the node address is the same as the one we are checking
+		elif [ "$RQ_NODE_ADDRESS" != "$NODE_ADDRESS" ]
+		then
+			MESSAGE="Node address '$RQ_NODE_ADDRESS' is different from the one we are checking '$NODE_ADDRESS'"
+		fi
+		
+		# If MESSAGE is empty, it means port is open and there are no errors
+		if [ -z "$MESSAGE" ]
+		then
+			break
+		else
+			# Display error message and ask if user wants to retry
+			if ! whiptail --title "Error" --yes-button "Retry" --no-button "Quit" \
+				--yesno "${MESSAGE}\n\nDo you want to retry?" 10 60
+			then
+				return 1
+			fi
+		fi
+	done
 	
 	return 0;
 }
