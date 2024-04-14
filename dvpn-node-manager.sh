@@ -1233,7 +1233,7 @@ function firewall_configure()
 	fi
 	
 	# Reload UFW
-	output_log "Reloading UFW, please wait..."
+	output_info "Reloading UFW, please wait..."
 	ufw reload > /dev/null 2>&1 || { output_error "Failed to reload UFW."; return 1; }
 	
 	return 0;
