@@ -25,6 +25,19 @@ The script interacts with multiple external API endpoints to fetch external data
 - **FOXINODES API** to control access to the API port from the Internet after node installation:
   - Endpoint: `https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/check-port`
 
+### Required Docker Images
+
+The script also depends on Docker images to run the dVPN node. These images are automatically downloaded according to the system configuration during script execution.
+
+The following Docker images are available for download:
+
+- **For general x86_64 architecture**:
+  - `ghcr.io/sentinel-official/dvpn-node:latest`
+- **For ARMv7 architecture (commonly used in devices like Raspberry Pi)**:
+  - `wajatmaka/sentinel-arm7-debian:v0.7.1`
+- **For ARM64 architecture**:
+  - `wajatmaka/sentinel-aarch64-alpine:v0.7.1`
+
 ## Installation
 
 To install Sentinel Config, you can follow the steps below.
