@@ -1091,7 +1091,7 @@ function wallet_remove()
 		--interactive \
 		--tty \
 		--volume ${CONFIG_DIR}:/root/.sentinelnode \
-		${CONTAINER_NAME} process keys delete $WALLET_NAME || { output_error "Failed to delete wallet."; return 1; }
+		${CONTAINER_NAME} process keys delete $WALLET_NAME > /dev/null 2>&1 || { output_error "Failed to delete wallet."; return 1; }
 	
 	output_success "Wallet has been removed successfully."
 	return 0;
