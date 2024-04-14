@@ -91,6 +91,14 @@ To check the status of the dVPN node container, you can execute the script with 
 sudo bash dvpn-node-manager.sh status
 ```
 
+### Show Wallet balance
+
+To show the wallet balance, you can execute the script with the `balance` parameter:
+
+```bash
+sudo bash dvpn-node-manager.sh balance
+```
+
 ### Show logs
 
 To show the logs of the dVPN node container, you can execute the script with the `logs` parameter:

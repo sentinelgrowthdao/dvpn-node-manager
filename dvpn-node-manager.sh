@@ -2315,6 +2315,13 @@ then
 		output_info "The dVPN node container is stopped."
 		whiptail --title "Status" --msgbox "The dVPN node container is stopped." 8 78
 	fi
+elif [ "$1" == "balance" ]
+then
+	load_config_files || exit 1;
+	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
+	wallet_balance || exit 1;
+	output_info "The node's wallet balance is: ${WALLET_BALANCE}"
+	whiptail --title "Wallet Balance" --msgbox "The node's wallet balance is: ${WALLET_BALANCE}" 8 78
 elif [ "$1" == "update" ]
 then
 	update_container || exit 1;
@@ -2338,6 +2345,7 @@ then
 	echo "  stop        Stop the Sentinel node"
 	echo "  restart     Restart the Sentinel node"
 	echo "  status      Display the Sentinel node status"
+	echo "  balance     Display the dVPN node wallet balance"
 	echo "  log         Display the Sentinel node logs"
 	echo "  check-port  Check if the node is accessible from the Internet"
 	echo "  update      Update the Sentinel node"
