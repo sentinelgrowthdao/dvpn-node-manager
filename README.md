@@ -94,7 +94,7 @@ Download the script using the `curl` command:
 curl -o $HOME/dvpn-node-manager.sh https://raw.githubusercontent.com/Foxinodes/dvpn-node-manager/main/dvpn-node-manager.sh
 ```
 
-** Set execution permissions**
+**Set execution permissions**
 
 Grant execution permissions to the script using the `chmod` command:
 
@@ -102,7 +102,7 @@ Grant execution permissions to the script using the `chmod` command:
 chmod +x dvpn-node-manager.sh
 ```
 
-** Running the Script**
+**Running the Script**
 
 Execute the script using the `sudo bash` command:
 
