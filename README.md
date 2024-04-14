@@ -4,7 +4,7 @@ This script `dvpn-node-manager.sh` is designed to facilitate the installation, t
 
 ## Dependencies
 
-The script is designed to run on a Linux-based operating system. The script has been tested on Ubuntu 22.04 LTS and Raspberry Pi OS (version 32-bit and 64-bit versions). The script is not guaranteed to work on other operating systems.
+The script is designed to run on a Linux-based operating system. The script has been tested on Ubuntu 22.04 LTS and Raspberry Pi OS (32-bit and 64-bit versions). The script is not guaranteed to work on other operating systems.
 
 ### Required Packages
 
