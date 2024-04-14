@@ -2223,8 +2223,23 @@ fi
 # If parameter "uninstall" is passed, remove the Sentinel node
 if [ "$1" == "uninstall" ]
 then
+	# Ask for confirmation before uninstallation
+	if ! whiptail --title "Confirm Uninstallation" --yes-button "Yes" --no-button "No" \
+		--defaultno --yesno "Are you sure you want to uninstall the dVPN node?" 10 60
+	then
+		# User selected "No", so we do not uninstall
+		echo "Uninstallation cancelled, no changes made."
+		exit 0
+	fi
+	
+	# Remove the wallet
+	wallet_remove || exit 1;
+	
 	# Remove the Sentinel node
 	container_remove || exit 1;
+	
+	# Remove firewall rules
+	firewall_reset || exit 1;
 	
 	# Remove the configuration files
 	remove_config_files || exit 1;
@@ -2232,9 +2247,9 @@ then
 	# Remove the Sentinel node directory
 	rm -rf ${CONFIG_DIR} || { output_error "Failed to remove dVPN node directory."; exit 1; }
 	
-	# Display message indicating that the dVPN node directory has been removed
-	output_success "The dVPN node directory has been successfully removed."
-	whiptail --title "Uninstallation Complete" --msgbox "The dVPN node directory has been successfully removed." 8 78
+	# Display message indicating that the dVPN node has been removed
+	output_success "The dVPN node has been successfully removed."
+	whiptail --title "Uninstallation Complete" --msgbox "The dVPN node has been successfully removed." 8 78
 	
 	# Exit the script
 	exit 0
