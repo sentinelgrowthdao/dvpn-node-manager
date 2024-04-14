@@ -1819,9 +1819,26 @@ function menu_installation()
 	
 	# Get local IP address
 	local LOCAL_IP=$(ip addr show wlan0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
+	
+	# Message to display after the node has been successfully installed and started
+	local MESSAGE="Congratulations on successfully installing and starting your dVPN node! It is now fully operational and accessible from the Internet.\n\n"
+	
+	# If LOCAL_IP is not empty
+	if [ ! -z "$LOCAL_IP" ]
+	then
+		MESSAGE+="Access the node dashboard at:\n"
+		MESSAGE+="   - Local network: https://${LOCAL_IP}:${NODE_PORT}/status\n"
+		MESSAGE+="   - From anywhere: https://${NODE_IP}:${NODE_PORT}/status\n"
+	else
+		MESSAGE+="Access the node dashboard at the following URL:\n"
+		MESSAGE+="   https://${NODE_IP}:${NODE_PORT}/status\n"
+	fi
+	
+	MESSAGE+="\nTo access and use your node as a dVPN server, please visit https://sentinel.co to find the dVPN applications that best suit your needs."
+	
 	# Display message indicating that the node has been successfully installed and started
-	whiptail --title "Installation Complete" --msgbox "The dVPN node has been successfully installed and started!\n\nAccess the node dashboard at:\nLocal network: https://${LOCAL_IP}:${NODE_PORT}/status\nFrom anywhere: https://${NODE_IP}:${NODE_PORT}/status" 12 100
-	output_success "The dVPN node has been successfully installed and started!"
+	whiptail --title "Installation Complete" --msgbox "$MESSAGE" 16 100
+	output_success "Congratulations on successfully installing and starting your dVPN node!"
 	
 	return 0;
 }
