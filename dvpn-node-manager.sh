@@ -740,9 +740,6 @@ function install_docker()
 	# Enable and start the Docker service
 	systemctl enable --now docker || { output_error "Failed to enable Docker."; return 1; }
 	
-	# Add the current user to the Docker group
-	usermod -aG docker $(whoami) || { output_error "Failed to add user to Docker group."; return 1; }
-	
 	# Add the current user to the Docker group if not already a member
 	docker_usermod || return 1;
 	
