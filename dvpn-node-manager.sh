@@ -1909,8 +1909,8 @@ function menu_settings()
 		
 		CHOICE=$(whiptail --title "Settings" --menu "${MESSAGE}" 21 60 5 \
 			"1" "Moniker" \
-			"2" "Network Settings" \
-			"3" "VPN Settings" \
+			"2" "Network" \
+			"3" "VPN" \
 			"4" "Gigabyte Prices" \
 			"5" "Hourly Prices" \
 			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3)
