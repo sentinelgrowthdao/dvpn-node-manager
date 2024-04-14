@@ -51,6 +51,7 @@ NODE_ADDRESS=""
 WALLET_BALANCE=""
 WALLET_BALANCE_AMOUNT=0
 WALLET_BALANCE_DENOM="DVPN"
+WALLET_PASSPHRASE=""
 CERTIFICATE_DATE_CREATION=""
 CERTIFICATE_DATE_EXPIRATION=""
 CERTIFICATE_ISSUER=""
@@ -84,7 +85,7 @@ function load_config_files()
 	CHAIN_ID=$(grep "^id\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	MAX_PEERS=$(grep "^max_peers\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	# RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	# BACKEND=$(grep "^backend\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	BACKEND=$(grep "^backend\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	WALLET_NAME=$(grep "^from\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
 	
 	# Get handshake enable parameter (check if the section exists and if the parameter exists in the section)
@@ -463,6 +464,9 @@ function check_installation()
 		return 1
 	fi
 	
+	# Load configuration and request passphrase to avoid being stuck
+	load_config_files
+	ask_wallet_passphrase
 	# If wallet does not exist, return false
 	if ! wallet_exist
 	then
@@ -853,11 +857,19 @@ function container_start()
 	# Show waiting message
 	output_info "Please wait while the dVPN node container is being started..."
 	
+	# If passphrase is required
+	if [ "$BACKEND" == "file" ]
+	then
+		output_error "Unable to start the dVPN node container because the backend is set to 'file'."
+		return 0;
+	fi
+	
 	# If container is already created, check if it is running
 	if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
 	then
 		# Check if the container is not running
-		if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+		if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
+		then
 			# Container is not running, attempt to start it
 			docker start ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to start the dVPN node container."; return 1; }
 			output_success "dVPN node container has been started successfully."
@@ -1014,20 +1026,38 @@ function wallet_initialization()
 		# Restore wallet
 		output_info "Restoring wallet, please wait..."
 		
-		echo "$MNEMONIC" | docker run --rm \
-			--interactive \
-			--volume ${CONFIG_DIR}:/root/.sentinelnode \
-			${CONTAINER_NAME} process keys add --recover > /dev/null 2>&1 || { output_error "Failed to restore wallet."; return 1; }
-		
+		# If passphrase is required
+		if [ "$BACKEND" == "file" ]
+		then
+			(echo "${MNEMONIC}"; echo "${WALLET_PASSPHRASE}") | docker run --rm \
+				--interactive \
+				--volume ${CONFIG_DIR}:/root/.sentinelnode \
+				${CONTAINER_NAME} process keys add --recover > /dev/null 2>&1 || { output_error "Failed to restore wallet."; return 1; }
+		else
+			echo "$MNEMONIC" | docker run --rm \
+				--interactive \
+				--volume ${CONFIG_DIR}:/root/.sentinelnode \
+				${CONTAINER_NAME} process keys add --recover > /dev/null 2>&1 || { output_error "Failed to restore wallet."; return 1; }
+		fi
 		output_success "Wallet restored successfully."
 	else
 		# Create new wallet
 		output_info "Creating new wallet, please wait..."
-		OUTPUT=$(docker run --rm \
-					--interactive \
-					--tty \
-					--volume ${CONFIG_DIR}:/root/.sentinelnode \
-					${CONTAINER_NAME} process keys add)
+		
+		# If passphrase is required
+		if [ "$BACKEND" == "file" ]
+		then
+			OUTPUT=$( (echo "${WALLET_PASSPHRASE}"; echo "${WALLET_PASSPHRASE}") | docker run --rm \
+						--interactive \
+						--volume ${CONFIG_DIR}:/root/.sentinelnode \
+						${CONTAINER_NAME} process keys add 2>&1 )
+		else
+			OUTPUT=$(docker run --rm \
+						--interactive \
+						--tty \
+						--volume ${CONFIG_DIR}:/root/.sentinelnode \
+						${CONTAINER_NAME} process keys add)
+		fi
 		
 		# If the ouput contains "Important" then extract the mnemonic
 		if echo "$OUTPUT" | grep -q "Important"
@@ -1080,13 +1110,22 @@ function wallet_initialization()
 function wallet_exist()
 {
 	# Check if a wallet with the specified name exists
-	local wallet_list_output
-	wallet_list_output=$(docker run --rm \
-		--interactive \
-		--tty \
-		--volume "${CONFIG_DIR}:/root/.sentinelnode" \
-		"${CONTAINER_NAME}" process keys list)
+	local wallet_list_output=""
 	
+	# If passphrase is required
+	if [ "$BACKEND" == "file" ]
+	then
+		wallet_list_output=$(echo "${WALLET_PASSPHRASE}" | docker run --rm \
+			--interactive \
+			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
+			"${CONTAINER_NAME}" process keys list)
+	else
+		wallet_list_output=$(docker run --rm \
+			--interactive \
+			--tty \
+			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
+			"${CONTAINER_NAME}" process keys list)
+	fi
 	# Use grep to check if the wallet name is in the list
 	if echo "$wallet_list_output" | grep -q "$WALLET_NAME"
 	then
@@ -1105,13 +1144,20 @@ function wallet_remove()
 		return 0;
 	fi
 	
-	# Delete existing wallet
-	docker run --rm \
-		--interactive \
-		--tty \
-		--volume ${CONFIG_DIR}:/root/.sentinelnode \
-		${CONTAINER_NAME} process keys delete $WALLET_NAME > /dev/null 2>&1 || { output_error "Failed to delete wallet."; return 1; }
-	
+	# If passphrase is required
+	if [ "$BACKEND" == "file" ]
+	then
+		echo "${WALLET_PASSPHRASE}" | docker run --rm \
+			--interactive \
+			--volume ${CONFIG_DIR}:/root/.sentinelnode \
+			${CONTAINER_NAME} process keys delete $WALLET_NAME > /dev/null 2>&1 || { output_error "Failed to delete wallet."; return 1; }
+	else
+		docker run --rm \
+			--interactive \
+			--tty \
+			--volume ${CONFIG_DIR}:/root/.sentinelnode \
+			${CONTAINER_NAME} process keys delete $WALLET_NAME > /dev/null 2>&1 || { output_error "Failed to delete wallet."; return 1; }
+	fi
 	output_success "Wallet has been removed successfully."
 	return 0;
 }
@@ -1129,12 +1175,22 @@ function wallet_addresses()
 	output_info "Please wait while the wallet addresses are being retrieved..."
 
 	# Execute Docker command once and store output
-	local WALLET_INFO=$(docker run --rm \
-		--interactive \
-		--tty \
-		--volume "${CONFIG_DIR}:/root/.sentinelnode" \
-		"${CONTAINER_NAME}" process keys show | awk -v name="$WALLET_NAME" '$1 == name')
-
+	local WALLET_INFO=""
+	
+	# If passphrase is required
+	if [ "$BACKEND" == "file" ]
+	then
+		WALLET_INFO=$(echo "${WALLET_PASSPHRASE}" | docker run --rm \
+			--interactive \
+			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
+			"${CONTAINER_NAME}" process keys show | awk -v name="$WALLET_NAME" '$1 == name')
+	else
+		WALLET_INFO=$(docker run --rm \
+			--interactive \
+			--tty \
+			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
+			"${CONTAINER_NAME}" process keys show | awk -v name="$WALLET_NAME" '$1 == name')
+	fi
 	# Extract public and node addresses from the output
 	PUBLIC_ADDRESS=$(echo "$WALLET_INFO" | awk '{print $3}')
 	NODE_ADDRESS=$(echo "$WALLET_INFO" | awk '{print $2}')
@@ -1610,6 +1666,66 @@ function ask_moniker()
 	return 0;
 }
 
+# Function to ask for node name
+function ask_wallet_security()
+{
+	# Define the message
+	MESSAGE="Do you wish to protect your wallet with a password? This will enhance security, but the password will be required every time the node restarts."
+	
+	# Display the whiptail dialog box
+	if whiptail --title "Wallet Protection" --yes-button "Yes" --no-button "No" \
+		--yesno --defaultno "$MESSAGE" 10 78
+	then
+		BACKEND="file"
+		output_info "Wallet protection is set to password-protected."
+	else
+		BACKEND="test"
+		output_info "Wallet protection is disabled."
+	fi
+	
+	return 0;
+}
+
+# Function to ask wallet passphrase
+function ask_wallet_passphrase()
+{
+	# If BACKEND is not set to "file"
+	if [ "$BACKEND" != "file" ]
+	then
+		return 0;
+	fi
+	
+	# If WALLET_PASSPHRASE is not empty, return 0
+	if [ ! -z "$WALLET_PASSPHRASE" ]
+	then
+		return 0;
+	fi
+	
+	while true
+	do
+		# Ask for wallet passphrase
+		WALLET_PASSPHRASE=$(whiptail --passwordbox "Please enter your wallet passphrase:" 8 78 \
+			--title "Wallet Passphrase" 3>&1 1>&2 2>&3) || return 1;
+		
+		# Check if the user pressed Cancel
+		if [ $? -ne 0 ]
+		then
+			return 1
+		fi
+		
+		# Remove end of line and spaces at the beginning and end
+		WALLET_PASSPHRASE=$(echo "$WALLET_PASSPHRASE" | tr -d '\r' | xargs)
+		
+		# Check that the user has entered a non-empty value of at least 8 characters.
+		if [ ! -z "$WALLET_PASSPHRASE" ] && [ ${#WALLET_PASSPHRASE} -ge 8 ]
+		then
+			break
+		fi
+	done
+	
+	return 0;
+}
+
 ####################################################################################################
 # Messages functions
 ####################################################################################################
@@ -1779,11 +1895,16 @@ function menu_installation()
 	then
 		# Load network configuration from API (don't stop the script if it fails)
 		load_network_configuration
+		# Ask for defining the wallet security
+		ask_wallet_security
 		# Refresh configuration files
 		refresh_config_files || return 1;
 		# If configuration has changed, ask user to configure the firewall
 		ask_firewall_configure "Do you want to automatically configure the firewall to allow incoming connections to the node?" || return 1;
 	fi
+	
+	# Ask the user to enter his passphrase for the rest of the run
+	ask_wallet_passphrase || { output_error "Failed to get wallet password."; return 1; }
 	
 	# Loop to initialize the wallet
 	while true;
@@ -1881,8 +2002,9 @@ function menu_configuration()
 {
 	# Load configuration into variables
 	load_config_files || return 1;
-
+	
 	# Load wallet addresses
+	ask_wallet_passphrase || { output_error "Failed to get wallet password."; return 1; }
 	wallet_addresses || { output_error "Failed to get public address, wallet seems to be corrupted."; return 1; }
 
 	CHOICE=$(whiptail --title "dVPN Node Manager" --menu "Welcome to the dVPN node configuration process.\n\nPlease select an option:" 16 78 6 \
@@ -2133,7 +2255,8 @@ function menu_actions()
 				if whiptail --title "Confirm Container Removal" --defaultno --yesno "Are you sure you want to completely delete the dVPN node container, wallet, firewall rules and configuration folder?" 8 78
 				then
 					# Remove the container, wallet, and configuration folder
-					wallet_remove
+					load_config_files
+					if ask_wallet_passphrase; then wallet_remove; fi
 					container_remove
 					firewall_reset
 					remove_config_files
@@ -2284,6 +2407,8 @@ then
 	fi
 	
 	# Remove the wallet
+	load_config_files || exit 1;
+	ask_wallet_passphrase || exit 1;
 	wallet_remove || exit 1;
 	
 	# Remove the Sentinel node
@@ -2321,6 +2446,8 @@ then
 		output_error "The dVPN node container is already running."
 		exit 1
 	fi
+	load_config_files || exit 1;
+	ask_wallet_passphrase || exit 1;
 	container_start || exit 1;
 	output_info "The dVPN node container has been successfully started."
 	whiptail --title "Start Complete" --msgbox "The dVPN node container has been successfully started." 8 78
@@ -2352,6 +2479,7 @@ then
 elif [ "$1" == "balance" ]
 then
 	load_config_files || exit 1;
+	ask_wallet_passphrase || exit 1;
 	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
 	wallet_balance || exit 1;
 	output_info "The node's wallet balance is: ${WALLET_BALANCE}"
@@ -2365,6 +2493,7 @@ then
 elif [ "$1" == "check-port" ]
 then
 	load_config_files || exit 1;
+	ask_wallet_passphrase || exit 1;
 	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
 	network_check_port || exit 1;
 	whiptail --title "Port check" --msgbox "Congratulations! Your node is accessible from the Internet." 8 78
