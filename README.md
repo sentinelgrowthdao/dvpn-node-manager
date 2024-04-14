@@ -2,6 +2,29 @@
 
 This script `dvpn-node-manager.sh` is designed to facilitate the installation, the configuration, and the management of the Sentinel dVPN node.
 
+## Dependencies
+
+The script is designed to run on a Linux-based operating system. The script has been tested on Ubuntu 22.04 LTS and Raspberry Pi OS (version 32-bit and 64-bit versions). The script is not guaranteed to work on other operating systems.
+
+### Required Packages
+
+The script automatically checks for and installs the necessary packages if they are not already present on your system. The required packages include: `whiptail`, `jq`, `curl`, `openssl`, `git`, and `docker`. These packages are required for script execution, JSON data processing, API requests, source control management and Docker container operation.
+
+### API Endpoints
+
+The script interacts with multiple external API endpoints to fetch external data:
+
+- **GROWTHDAO API** to obtain the balance of the node address:
+  - Endpoint: `https://api.sentinelgrowthdao.com/cosmos/bank/v1beta1/balances/`
+- **FOXINODES API** for IP Checks:
+  - Endpoint: `https://wapi.foxinodes.net/api/v1/sentinel/check-ip`
+- **DYNDNS** for IP Checks (fallback if foxinodes API fails):
+  - Endpoint: `https://checkip.dyndns.org`
+- **FOXINODES API** to download the latest sentinel network configuration and avoid script updates:
+  - Endpoint: `https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/configuration`
+- **FOXINODES API** to control access to the API port from the Internet after node installation:
+  - Endpoint: `https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/check-port`
+
 ## Installation
 
 To install Sentinel Config, you can follow the steps below.
