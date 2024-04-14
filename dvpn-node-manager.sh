@@ -554,7 +554,7 @@ function certificate_generate()
 	chown root:root ${CONFIG_TLS_CRT} > /dev/null 2>&1 && \
 	chown root:root ${CONFIG_TLS_KEY} > /dev/null 2>&1 || { output_error "Failed to change ownership of certificate files."; return 1; }
 	
-	output_info "Certificate files have been generated."
+	output_success "Certificate files have been generated."
 	return 0;
 }
 
