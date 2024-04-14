@@ -40,29 +40,79 @@ The following Docker images are available for download:
 
 ## Installation
 
-To install Sentinel Config, you can follow the steps below.
+### Installation from Debian Package
 
-1. Download the script using the `curl` command:
+For users on Debian-based systems, the `dvpn-node-manager` is available as a `.deb` package, which simplifies the installation process and automatically installs all required dependencies.
+
+**Downloading the Package**
+
+You can download the `.deb` package using the following command:
+
+```bash
+curl -o $HOME/dvpn-node-manager_1.0-1_all.deb https://files.foxinodes.net/sentinel/dvpn-node-manager_1.0-1_all.deb
+```
+
+**Installing the Package**
+
+Installing the package using the `apt` package manager:
+
+```bash
+sudo apt install $HOME/dvpn-node-manager_1.0-1_all.deb
+```
+
+This command will install the dvpn-node-manager script and all necessary dependencies on your system. The package takes care of setting up everything needed for the script to run.
+
+**Running the Script**
+
+Running the script using the `dvpn-node-manager` command:
+
+```bash
+sudo dvpn-node-manager
+```
+
+This command will launch the dVPN Node Manager, allowing you to manage your dVPN node's settings and operations directly through a simple command-line interface.
+
+**Uninstalling the Package**
+
+If you wish to uninstall the dVPN Node Manager, you can do so by executing:
+
+```bash
+sudo apt remove dvpn-node-manager
+```
+
+This command will remove the dvpn-node-manager package from your system, as well as all configurations, docker images and containers.
+
+### Installation from Source
+
+To install the script from source, follow the steps below:
+
+**Downloading the Script**
+
+Download the script using the `curl` command:
 
 ```bash
 curl -o $HOME/dvpn-node-manager.sh https://raw.githubusercontent.com/Foxinodes/dvpn-node-manager/main/dvpn-node-manager.sh
 ```
 
-2. Grant execution permissions to the script using the `chmod` command:
+** Set execution permissions**
+
+Grant execution permissions to the script using the `chmod` command:
 
 ```bash
 chmod +x dvpn-node-manager.sh
 ```
 
-3. Execute the script using the `sudo bash` command:
+** Running the Script**
+
+Execute the script using the `sudo bash` command:
 
 ```bash
 sudo bash dvpn-node-manager.sh
 ```
 
-4. Follow the installation process as indicated by the interface. If Docker is not already installed on the machine, it will be installed followed by a system reboot.
+Follow the installation process as indicated by the interface. If Docker is not already installed on the machine, it will be installed followed by a system reboot.
 
-5. Restarting the script after installation will allow for modifying settings and managing the wallet or node.
+Restarting the script after installation will allow for modifying settings and managing the wallet or node.
 
 ## Commands
 
