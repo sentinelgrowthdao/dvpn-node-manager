@@ -1029,7 +1029,7 @@ function wallet_initialization()
 		# If passphrase is required
 		if [ "$BACKEND" == "file" ]
 		then
-			(echo "${MNEMONIC}"; echo "${WALLET_PASSPHRASE}") | docker run --rm \
+			(echo "${MNEMONIC}\n${WALLET_PASSPHRASE}\n${WALLET_PASSPHRASE}") | docker run --rm \
 				--interactive \
 				--volume ${CONFIG_DIR}:/root/.sentinelnode \
 				${CONTAINER_NAME} process keys add --recover > /dev/null 2>&1 || { output_error "Failed to restore wallet."; return 1; }
