@@ -869,38 +869,80 @@ function container_start()
 		fi
 		return 0
 	fi
-
+	
 	# If node type is wireguard
 	if [ "$NODE_TYPE" == "wireguard" ]
 	then
-		# Start WireGuard node
-		docker run -d \
-			--name ${CONTAINER_NAME} \
-			--restart unless-stopped \
-			--volume ${CONFIG_DIR}:/root/.sentinelnode \
-			--volume /lib/modules:/lib/modules \
-			--cap-drop ALL \
-			--cap-add NET_ADMIN \
-			--cap-add NET_BIND_SERVICE \
-			--cap-add NET_RAW \
-			--cap-add SYS_MODULE \
-			--sysctl net.ipv4.ip_forward=1 \
-			--sysctl net.ipv6.conf.all.disable_ipv6=0 \
-			--sysctl net.ipv6.conf.all.forwarding=1 \
-			--sysctl net.ipv6.conf.default.forwarding=1 \
-			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
-			--publish ${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp \
-			${CONTAINER_NAME} process start > /dev/null 2>&1 || { output_error "Failed to start WireGuard node."; return 1; }
+		# If passphrase is required
+		if [ "$BACKEND" == "file" ]
+		then
+			# Start WireGuard node
+			nohup bash -c "echo '${WALLET_PASSPHRASE}' | docker run --rm \
+				--interactive \
+				--name ${CONTAINER_NAME} \
+				--volume ${CONFIG_DIR}:/root/.sentinelnode \
+				--volume /lib/modules:/lib/modules \
+				--cap-drop ALL \
+				--cap-add NET_ADMIN \
+				--cap-add NET_BIND_SERVICE \
+				--cap-add NET_RAW \
+				--cap-add SYS_MODULE \
+				--sysctl net.ipv4.ip_forward=1 \
+				--sysctl net.ipv6.conf.all.disable_ipv6=0 \
+				--sysctl net.ipv6.conf.all.forwarding=1 \
+				--sysctl net.ipv6.conf.default.forwarding=1 \
+				--publish ${NODE_PORT}:${NODE_PORT}/tcp \
+				--publish ${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp \
+				${CONTAINER_NAME} process start" > /dev/null 2>&1 &
+			disown
+			# Wait for 5 seconds
+			sleep 5
+		else
+			# Start WireGuard node
+			docker run -d \
+				--name ${CONTAINER_NAME} \
+				--restart unless-stopped \
+				--volume ${CONFIG_DIR}:/root/.sentinelnode \
+				--volume /lib/modules:/lib/modules \
+				--cap-drop ALL \
+				--cap-add NET_ADMIN \
+				--cap-add NET_BIND_SERVICE \
+				--cap-add NET_RAW \
+				--cap-add SYS_MODULE \
+				--sysctl net.ipv4.ip_forward=1 \
+				--sysctl net.ipv6.conf.all.disable_ipv6=0 \
+				--sysctl net.ipv6.conf.all.forwarding=1 \
+				--sysctl net.ipv6.conf.default.forwarding=1 \
+				--publish ${NODE_PORT}:${NODE_PORT}/tcp \
+				--publish ${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp \
+				${CONTAINER_NAME} process start > /dev/null 2>&1 || { output_error "Failed to start WireGuard node."; return 1; }
+		fi
 	elif [ "$NODE_TYPE" == "v2ray" ]
 	then
-		# Start V2Ray node
-		docker run -d \
-			--name ${CONTAINER_NAME} \
-			--restart unless-stopped \
-			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
-			--publish ${NODE_PORT}:${NODE_PORT}/tcp \
-			--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
-			${CONTAINER_NAME} process start > /dev/null 2>&1 || { output_error "Failed to start V2Ray node."; return 1; }
+		# If passphrase is required
+		if [ "$BACKEND" == "file" ]
+		then
+			# Start V2Ray node
+			nohup bash -c "echo '${WALLET_PASSPHRASE}' | docker run --rm \
+				--interactive \
+				--name ${CONTAINER_NAME} \
+				--volume "${CONFIG_DIR}:/root/.sentinelnode" \
+				--publish ${NODE_PORT}:${NODE_PORT}/tcp \
+				--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
+				${CONTAINER_NAME} process start" > /dev/null 2>&1 &
+			disown
+			# Wait for 5 seconds
+			sleep 5
+		else
+			# Start V2Ray node
+			docker run -d \
+				--name ${CONTAINER_NAME} \
+				--restart unless-stopped \
+				--volume "${CONFIG_DIR}:/root/.sentinelnode" \
+				--publish ${NODE_PORT}:${NODE_PORT}/tcp \
+				--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
+				${CONTAINER_NAME} process start > /dev/null 2>&1 || { output_error "Failed to start V2Ray node."; return 1; }
+		fi
 	else
 		output_error "Invalid node type."
 		return 1
