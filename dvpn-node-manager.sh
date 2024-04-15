@@ -1682,7 +1682,7 @@ function ask_wallet_security()
 	
 	# Display the whiptail dialog box
 	if whiptail --title "Wallet Protection" --yes-button "Yes" --no-button "No" \
-		--yesno --defaultno "$MESSAGE" 10 78
+		--yesno "$MESSAGE" 10 78
 	then
 		BACKEND="file"
 		output_info "Wallet protection is set to password-protected."
