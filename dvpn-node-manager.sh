@@ -1409,12 +1409,14 @@ function ask_remote_ip()
 	local VALUE=$(whiptail --inputbox "Please enter your node's public IP address:" 8 78 "$NODE_IP" --title "Node IP" 3>&1 1>&2 2>&3) || return 1;
 	
 	# Check if the user pressed Cancel
-	if [ $? -ne 0 ]; then
+	if [ $? -ne 0 ]
+	then
 		return 1
 	fi
 
 	# Check if the user entered a value
-	if [ -z "$VALUE" ]; then
+	if [ -z "$VALUE" ]
+	then
 		return 2
 	fi
 	
@@ -1554,9 +1556,11 @@ function ask_node_location()
 	local datacenter_state="OFF"
 	local residential_state="OFF"
 
-	if [ "$NODE_LOCATION" == "datacenter" ]; then
+	if [ "$NODE_LOCATION" == "datacenter" ]
+	then
 		datacenter_state="ON"
-	elif [ "$NODE_LOCATION" == "residential" ]; then
+	elif [ "$NODE_LOCATION" == "residential" ]
+	then
 		residential_state="ON"
 	else
 		residential_state="ON"
@@ -1631,12 +1635,14 @@ function ask_max_peers()
 	local VALUE=$(whiptail --inputbox "Please enter the maximum number of peers you want to connect to:" 8 78 "$MAX_PEERS" --title "Max Peers" 3>&1 1>&2 2>&3)
 	
 	# Check if the user pressed Cancel
-	if [ $? -ne 0 ]; then
+	if [ $? -ne 0 ]
+	then
 		return 1
 	fi
 
 	# Check if the user entered a value
-	if [ -z "$VALUE" ]; then
+	if [ -z "$VALUE" ]
+	then
 		return 2
 	fi
 
@@ -1652,12 +1658,14 @@ function ask_moniker()
 	local VALUE=$(whiptail --inputbox "Please enter your node's moniker:" 8 78 "$NODE_MONIKER" --title "Node Moniker" 3>&1 1>&2 2>&3)
 
 	# Check if the user pressed Cancel
-	if [ $? -ne 0 ]; then
+	if [ $? -ne 0 ]
+	then
 		return 1
 	fi
 
 	# Check if the user entered a value
-	if [ -z "$VALUE" ]; then
+	if [ -z "$VALUE" ]
+	then
 		return 2
 	fi
 
@@ -1746,7 +1754,8 @@ function message_wait_funds()
 	# Display message to wait for funds and allow user to choose to quit or continue
 	if whiptail --title "Funds Required" \
 		--yes-button "Done" --no-button "Quit" \
-		--yesno "$MESSAGE" 12 78; then
+		--yesno "$MESSAGE" 12 78
+	then
 		return 0
 	else
 		return 1
@@ -1757,7 +1766,8 @@ function message_wait_funds()
 function message_docker_reboot_required()
 {
 	# Display message to inform about Docker installation and reboot requirement
-	if whiptail --title "Docker Installation Complete" --yesno "Docker has been successfully installed on your system. For the installation to take full effect, a system reboot is required. Please select 'Reboot Now' to restart your system immediately, or choose 'Quit Without Reboot' if you prefer to reboot later at your own convenience." 12 78 --yes-button "Reboot Now" --no-button "Quit Without Reboot"; then
+	if whiptail --title "Docker Installation Complete" --yesno "Docker has been successfully installed on your system. For the installation to take full effect, a system reboot is required. Please select 'Reboot Now' to restart your system immediately, or choose 'Quit Without Reboot' if you prefer to reboot later at your own convenience." 12 78 --yes-button "Reboot Now" --no-button "Quit Without Reboot"
+	then
 		# Reboot the system
 		output_info "Rebooting now... Please run the script again after the system has restarted."
 		reboot
@@ -2016,7 +2026,9 @@ function menu_configuration()
 		"About" "View system and software details" \
 		--ok-button "Select" --cancel-button "Finish" 3>&1 1>&2 2>&3)
 	
-	if [ $? -eq 1 ]; then  # Check if the user pressed the 'Finish' button, which is the cancel button now
+	# Check if the user pressed the 'Finish' button, which is the cancel button now
+	if [ $? -eq 1 ]
+	then
 		exit 0
 	fi
 
@@ -2072,7 +2084,8 @@ function menu_settings()
 		
 		# If user chooses 'Back', break the loop to return to previous menu
 		EXITSTATUS=$?
-		if [ $EXITSTATUS -eq 1 ]; then
+		if [ $EXITSTATUS -eq 1 ]
+		then
 			break
 		fi
 
@@ -2296,7 +2309,8 @@ function menu_update()
 		
 		# If user chooses 'Back', break the loop to return to previous menu
 		EXITSTATUS=$?
-		if [ $EXITSTATUS -eq 1 ]; then
+		if [ $EXITSTATUS -eq 1 ]
+		then
 			return 0
 		fi
 		
@@ -2361,7 +2375,8 @@ echo "Architecture: $(uname -m)"
 echo "Script Version: ${INSTALLER_VERSION}"
 
 # Check if the script is executed with sudo permissions
-if [ "$(id -u)" != "0" ]; then
+if [ "$(id -u)" != "0" ]
+then
 	echo -e "\e[31m[ERROR]\e[0m This script must be run with sudo permissions"
 	exit 1
 fi
