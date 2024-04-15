@@ -857,13 +857,6 @@ function container_start()
 	# Show waiting message
 	output_info "Please wait while the dVPN node container is being started..."
 	
-	# If passphrase is required
-	if [ "$BACKEND" == "file" ]
-	then
-		output_error "Unable to start the dVPN node container because the backend is set to 'file'."
-		return 0;
-	fi
-	
 	# If container is already created, check if it is running
 	if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
 	then
