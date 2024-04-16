@@ -1795,6 +1795,45 @@ function ask_wallet_passphrase()
 	return 0;
 }
 
+# Function to ask if user wants to abort installation
+function ask_abort_installation()
+{
+	# Ask if user wants to abort the installation
+	if whiptail --title "Abort Installation" --yesno "Do you want to abort the installation process?" 8 78 \
+		--defaultno 8 78
+	then
+		return 0;
+	fi
+	
+	return 1;
+}
+
+# Function to retrieve information and offer the choice of aborting the installation
+function install_input_prompt()
+{
+	local prompt_function="$1"
+	while true;
+	do
+		$prompt_function
+		case $? in
+			1)
+				if ask_abort_installation
+				then
+					output_info "Installation aborted."
+					return 1;
+				fi
+				;;
+			0)
+				break;
+				;;
+			*)
+				;;
+		esac
+	done
+
+	return 0;
+}
+
 ####################################################################################################
 # Messages functions
 ####################################################################################################
