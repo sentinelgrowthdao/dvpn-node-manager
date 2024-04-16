@@ -2323,6 +2323,7 @@ function menu_actions()
 				"Restart" "dVPN Node" \
 				"Stop" "dVPN Node" \
 				"Remove" "only the dVPN Node container" \
+				"Wipe" "dVPN node container, wallet, and configuration folder" 3>&1 1>&2 2>&3) || return 0;
 		else
 			status_msg="dVPN node Status: Stopped"
 			CHOICE=$(whiptail --title "Actions" \
@@ -2330,7 +2331,7 @@ function menu_actions()
 				--menu "$status_msg\nChoose an option:" 15 78 3 \
 				"Start" "dVPN Node" \
 				"Remove" "Only remove the dVPN Node container" \
-				"Wipe" "Node container, wallet, and configuration folder" 3>&1 1>&2 2>&3)
+				"Wipe" "Node container, wallet, and configuration folder" 3>&1 1>&2 2>&3) || return 0;
 		fi
 
 		# Handle selected option
