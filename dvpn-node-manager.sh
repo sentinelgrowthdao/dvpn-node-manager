@@ -471,7 +471,8 @@ function check_installation()
 	
 	# Load configuration and request passphrase to avoid being stuck
 	load_config_files
-	ask_wallet_passphrase
+	ask_wallet_passphrase || { output_error "The wallet passphrase is required to proceed."; exit 1; }
+	
 	# If wallet does not exist, return false
 	if ! wallet_exist
 	then
