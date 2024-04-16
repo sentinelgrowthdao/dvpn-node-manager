@@ -2434,6 +2434,25 @@ function menu_about()
 }
 
 ####################################################################################################
+# Actions functions
+####################################################################################################
+
+# Function to uninstall the dVPN node and all dependencies
+function action_uninstall()
+{
+	# Load configuration into variables
+	load_config_files
+	# Remove the Sentinel node
+	container_remove
+	# Remove firewall rules
+	firewall_reset
+	# Remove the configuration files
+	remove_config_files
+	# Remove the Sentinel node directory
+	rm -rf ${CONFIG_DIR} || { output_error "Failed to remove dVPN node directory."; exit 1; }
+}
+
+####################################################################################################
 # Main function
 ####################################################################################################
 
