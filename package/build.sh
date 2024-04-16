@@ -38,3 +38,6 @@ mv ../dvpn-node-manager_*.deb ${DIST_DIR} || echo "No generic .deb files to move
 
 # Reset architecture
 dpkg-architecture -a$(dpkg --print-architecture)
+
+# Change permissions of the dist directory
+chown -R $SUDO_USER:$SUDO_USER ${DIST_DIR}
