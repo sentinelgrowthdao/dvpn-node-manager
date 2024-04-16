@@ -2401,20 +2401,15 @@ function menu_actions()
 # Function to update the Sentinel image
 function menu_update()
 {
+	local CHOICE=""
+	
 	while true
 	do
 		# Menu pour choisir entre metre à jour le container et la configuration blockchain
 		CHOICE=$(whiptail --title "Update Sentinel Node" --menu "Choose an option:" 15 60 5 \
 			"Container" "Update the dVPN node container" \
 			"Network" "Update the dVPN node network configuration" \
-			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3)
-		
-		# If user chooses 'Back', break the loop to return to previous menu
-		EXITSTATUS=$?
-		if [ $EXITSTATUS -eq 1 ]
-		then
-			return 0
-		fi
+			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3) || return 0;
 		
 		case $CHOICE in
 			"Container")
