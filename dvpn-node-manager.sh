@@ -2181,15 +2181,8 @@ function menu_settings()
 			"3" "VPN" \
 			"4" "Gigabyte Prices" \
 			"5" "Hourly Prices" \
-			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3)
+			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3) || return 1;
 		
-		# If user chooses 'Back', break the loop to return to previous menu
-		EXITSTATUS=$?
-		if [ $EXITSTATUS -eq 1 ]
-		then
-			break
-		fi
-
 		case $CHOICE in
 			1)
 				if ask_moniker && ask_node_location;
