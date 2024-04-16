@@ -73,6 +73,12 @@ FOXINODES_API_CHECK_PORT="https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/c
 # Function to load configuration files into variables
 function load_config_files()
 {
+	if [ ! -f "${CONFIG_FILE}" ]
+	then
+		output_info "Configuration files do not exist."
+		return 0
+	fi
+
 	# Show waiting message
 	output_info "Please wait while the configuration files are being loaded..."
 	
