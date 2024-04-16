@@ -2258,7 +2258,7 @@ function menu_wallet()
 	MESSAGE+="${LABEL_BALANCE}${PAD_BALANCE}${WALLET_BALANCE}"
 	
 	# Display wallet information and prompt for next action
-	whiptail --title "Wallet Information" --msgbox "$MESSAGE" 12 $WIDTH
+	whiptail --title "Wallet Information" --msgbox "$MESSAGE" 12 $WIDTH --ok-button "Back"
 }
 
 # Function to display the certificate information
