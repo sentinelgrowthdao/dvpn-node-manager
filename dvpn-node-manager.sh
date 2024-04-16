@@ -2358,13 +2358,8 @@ function menu_actions()
 			"Wipe")
 				if whiptail --title "Confirm Container Removal" --defaultno --yesno "Are you sure you want to completely delete the dVPN node container, wallet, firewall rules and configuration folder?" 8 78
 				then
-					# Remove the container, wallet, and configuration folder
-					load_config_files
-					if ask_wallet_passphrase; then wallet_remove; fi
-					container_remove
-					firewall_reset
-					remove_config_files
-
+					action_uninstall
+					
 					# Ask user if they want to restart the installation or exit
 					if whiptail --title "Restart Installation" --yesno "Do you want to restart the installation process?" 8 78
 					then
@@ -2530,20 +2525,8 @@ then
 		fi
 	fi
 	
-	# Load configuration into variables
-	load_config_files || exit 1;
-
-	# Remove the Sentinel node
-	container_remove || exit 1;
-	
-	# Remove firewall rules
-	firewall_reset || exit 1;
-	
-	# Remove the configuration files
-	remove_config_files || exit 1;
-	
-	# Remove the Sentinel node directory
-	rm -rf ${CONFIG_DIR} || { output_error "Failed to remove dVPN node directory."; exit 1; }
+	# Perform the uninstallation
+	action_uninstall
 	
 	# Display message indicating that the dVPN node has been removed
 	output_success "The dVPN node has been successfully removed."
