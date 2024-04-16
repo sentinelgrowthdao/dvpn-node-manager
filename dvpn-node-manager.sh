@@ -2108,13 +2108,13 @@ function menu_settings()
 		MESSAGE+="  - Moniker: ${NODE_MONIKER}\n"
 		MESSAGE+="  - Node Location: ${NODE_LOCATION}\n"
 		MESSAGE+="  - Remote IP: ${NODE_IP}\n"
-		MESSAGE+="  - Node Port: ${NODE_PORT}\n"
+		MESSAGE+="  - Node Port: ${NODE_PORT}/tcp\n"
 		if [ "$NODE_TYPE" = "wireguard" ]
 		then
-			MESSAGE+="  - WireGuard Port: ${WIREGUARD_PORT}\n"
+			MESSAGE+="  - WireGuard Port: ${WIREGUARD_PORT}/udp\n"
 		elif [ "$NODE_TYPE" = "v2ray" ]
 		then
-			MESSAGE+="  - V2Ray Port: ${V2RAY_PORT}\n"
+			MESSAGE+="  - V2Ray Port: ${V2RAY_PORT}/tcp\n"
 		fi
 		MESSAGE+="See more at: https://${NODE_IP}:${NODE_PORT}/status\n"
 		MESSAGE+="\nChoose a settings group to configure:"
