@@ -1,12 +1,4 @@
 #!/bin/sh
-set -e
-
-# Environment variables
-USER_NAME=${SUDO_USER:-$(whoami)}
-USER_HOME=$(getent passwd ${USER_NAME} | cut -d: -f6)
-CONFIG_DIR="${USER_HOME}/.sentinelnode"
-IMAGE_NAME="sentinel-dvpn-node"
-CONTAINER_NAME="sentinel-dvpn-node"
 
 # Execute the uninstall script
 dvpn-node-manager uninstall force
