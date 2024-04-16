@@ -1532,7 +1532,7 @@ function ask_wireguard_port()
 	do
 		# Ask for node port
 		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for WireGuard:" 8 78 "$WIREGUARD_PORT" \
-			--title "WireGuard Port" 3>&1 1>&2 2>&3) || { echo "Failed to get node port" && return 1; }
+			--title "WireGuard Port" 3>&1 1>&2 2>&3) || { return 1; }
 		# If value is not empty and is integer (between 1024 and 65535) and different of $NODE_PORT
 		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]] && \
 			[[ "$VALUE" -ge 1024 ]] && [[ "$VALUE" -le 65535 ]] && \
