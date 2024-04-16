@@ -2436,7 +2436,7 @@ function menu_about()
 	local NODE_VERSION=$(docker run --rm --tty ${CONTAINER_NAME} process version | tr -d '\r')
 	
 	# Display the about menu using whiptail
-	whiptail --title "About" --msgbox "
+	whiptail --title "About" --ok-button "Back" --msgbox "
 	Server Model: $(dmidecode -s system-product-name)
 	Operating System: $(lsb_release -is) $(lsb_release -rs)
 	Kernel Version: $(uname -r)
