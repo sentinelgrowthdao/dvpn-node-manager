@@ -2059,7 +2059,7 @@ function menu_configuration()
 	load_config_files || return 1;
 	
 	# Load wallet addresses
-	ask_wallet_passphrase || { output_error "Failed to get wallet password."; return 1; }
+	ask_wallet_passphrase || { output_error "Failed to get wallet passphrase, configuration menu cannot be displayed."; return 1; }
 	wallet_addresses || { output_error "Failed to get public address, wallet seems to be corrupted."; return 1; }
 
 	local CHOICE=$(whiptail --title "dVPN Node Manager" --menu "Welcome to the dVPN node configuration process.\n\nPlease select an option:" 16 78 6 \
