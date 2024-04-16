@@ -2452,6 +2452,13 @@ function menu_about()
 # Main function
 ####################################################################################################
 
+# Check if the script is executed with sudo permissions
+if [ "$(id -u)" != "0" ]
+then
+	echo -e "\e[31m[ERROR]\e[0m This script must be run with sudo permissions"
+	exit 1
+fi
+
 # Clear screen
 clear
 
@@ -2474,13 +2481,6 @@ echo "Operating System: $(lsb_release -is) $(lsb_release -rs)"
 echo "Kernel Version: $(uname -r)"
 echo "Architecture: $(uname -m)"
 echo "Script Version: ${INSTALLER_VERSION}"
-
-# Check if the script is executed with sudo permissions
-if [ "$(id -u)" != "0" ]
-then
-	echo -e "\e[31m[ERROR]\e[0m This script must be run with sudo permissions"
-	exit 1
-fi
 
 # Check if whiptail is not installed
 if ! command -v whiptail &> /dev/null
