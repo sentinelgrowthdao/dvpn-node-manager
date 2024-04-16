@@ -1950,16 +1950,16 @@ function menu_installation()
 	then
 		# Load network configuration from API (don't stop the script if it fails)
 		load_network_configuration
-		# Ask for defining the wallet security
-		ask_wallet_security
+		# Ask for defining the wallet security and passphrase
+		ask_wallet_security && ask_wallet_passphrase || { output_error "Failed to get wallet passphrase."; return 1; }
 		# Refresh configuration files
 		refresh_config_files || return 1;
 		# If configuration has changed, ask user to configure the firewall
 		ask_firewall_configure "Do you want to automatically configure the firewall to allow incoming connections to the node?" || return 1;
 	fi
-	
+
 	# Ask the user to enter his passphrase for the rest of the run
-	ask_wallet_passphrase || { output_error "Failed to get wallet password."; return 1; }
+	ask_wallet_passphrase || { output_error "Failed to get wallet passphrase, installation cannot continue."; return 1; }
 	
 	# Loop to initialize the wallet
 	while true;
