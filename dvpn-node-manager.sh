@@ -2118,21 +2118,17 @@ function menu_configuration()
 	ask_wallet_passphrase || { output_error "Failed to get wallet passphrase, configuration menu cannot be displayed."; return 1; }
 	wallet_addresses || { output_error "Failed to get public address, wallet seems to be corrupted."; return 1; }
 
-	local CHOICE=$(whiptail --title "dVPN Node Manager" --menu "Welcome to the dVPN node configuration process.\n\nPlease select an option:" 16 78 6 \
+	local CHOICE=""
+	
+	CHOICE=$(whiptail --title "dVPN Node Manager" --menu "Welcome to the dVPN node configuration process.\n\nPlease select an option:" 16 78 6 \
 		"Settings" "Modify node settings" \
 		"Wallet" "Access wallet details" \
 		"Certificate" "Access certificate details" \
 		"Actions" "Manage node operations" \
 		"Update" "Apply node updates" \
 		"About" "View system and software details" \
-		--ok-button "Select" --cancel-button "Finish" 3>&1 1>&2 2>&3)
+		--ok-button "Select" --cancel-button "Finish" 3>&1 1>&2 2>&3) || exit 0;
 	
-	# Check if the user pressed the 'Finish' button, which is the cancel button now
-	if [ $? -eq 1 ]
-	then
-		exit 0
-	fi
-
 	# Handle selected option
 	case $CHOICE in
 		"Settings")
