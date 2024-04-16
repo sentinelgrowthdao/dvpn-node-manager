@@ -1,13 +1,24 @@
+dvpn-node-manager (1.2-1) unstable; urgency=medium
+
+- Fix package uninstall script to execute `dvpn-node-manager uninstall force` command.
+- Add a question to allow the user to interrupt the installation process.
+- Fix wallet management protected by a passphrase
+- Bug fixes and improvements.
+
+-- FoxinouFr <foxinou@foxinodes.net> Mon, 16 Apr 2024 21:00:00 +0000
+
 dvpn-node-manager (1.1-1) unstable; urgency=medium
-	* Updated dVPN Node Manager script package.
-	* Fixed various bugs and issues.
-	* Added support for wallets protected by a passphrase.
- -- FoxinouFr <foxinou@foxinodes.net>  Mon, 15 Apr 2024 23:30:00 +0000
+
+- Updated dVPN Node Manager script package.
+- Fixed various bugs and issues.
+- Added support for wallets protected by a passphrase.
+
+-- FoxinouFr <foxinou@foxinodes.net> Mon, 15 Apr 2024 23:30:00 +0000
 
 dvpn-node-manager (1.0-1) unstable; urgency=low
 
-  * Initial release of the dVPN Node Manager script package.
-  * Includes Docker installation and node management functionalities.
-  * Include a set of commands to manage the dVPN node.
+- Initial release of the dVPN Node Manager script package.
+- Includes Docker installation and node management functionalities.
+- Include a set of commands to manage the dVPN node.
 
- -- FoxinouFr <foxinou@foxinodes.net>  Fri, 14 Apr 2024 12:00:00 +0000
+-- FoxinouFr <foxinou@foxinodes.net> Fri, 14 Apr 2024 12:00:00 +0000
