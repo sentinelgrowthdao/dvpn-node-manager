@@ -49,7 +49,7 @@ For users on Debian-based systems, the `dvpn-node-manager` is available as a `.d
 You can download the `.deb` package using the following command:
 
 ```bash
-curl -o $HOME/dvpn-node-manager_1.1-1_all.deb https://files.foxinodes.net/sentinel/dvpn-node-manager_1.1-1_all.deb
+sudo curl -o /var/cache/apt/archives/dvpn-node-manager_1.2-1_all.deb https://files.foxinodes.net/sentinel/dvpn-node-manager_1.2-1_all.deb && sudo chmod 644 /var/cache/apt/archives/dvpn-node-manager_1.2-1_all.deb && sudo chown _apt:root /var/cache/apt/archives/dvpn-node-manager_1.2-1_all.deb
 ```
 
 **Installing the Package**
@@ -57,7 +57,7 @@ curl -o $HOME/dvpn-node-manager_1.1-1_all.deb https://files.foxinodes.net/sentin
 Installing the package using the `apt` package manager:
 
 ```bash
-sudo apt install $HOME/dvpn-node-manager_1.1-1_all.deb
+sudo apt install /var/cache/apt/archives/dvpn-node-manager_1.2-1_all.deb
 ```
 
 This command will install the dvpn-node-manager script and all necessary dependencies on your system. The package takes care of setting up everything needed for the script to run.
