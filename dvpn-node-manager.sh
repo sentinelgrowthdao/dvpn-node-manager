@@ -2457,20 +2457,22 @@ fi
 # If parameter "uninstall" is passed, remove the Sentinel node
 if [ "$1" == "uninstall" ]
 then
-	# Ask for confirmation before uninstallation
-	if ! whiptail --title "Confirm Uninstallation" --yes-button "Yes" --no-button "No" \
-		--defaultno --yesno "Are you sure you want to uninstall the dVPN node?" 10 60
+	# If second parameter is not set or is not "force", ask for confirmation before uninstallation
+	if [ -z "$2" ] || [ "$2" != "force" ]
 	then
-		# User selected "No", so we do not uninstall
-		echo "Uninstallation cancelled, no changes made."
-		exit 0
+		# Ask for confirmation before uninstallation
+		if ! whiptail --title "Confirm Uninstallation" --yes-button "Yes" --no-button "No" \
+			--defaultno --yesno "Are you sure you want to uninstall the dVPN node?" 10 60
+		then
+			# User selected "No", so we do not uninstall
+			echo "Uninstallation cancelled, no changes made."
+			exit 0
+		fi
 	fi
 	
-	# Remove the wallet
+	# Load configuration into variables
 	load_config_files || exit 1;
-	ask_wallet_passphrase || exit 1;
-	wallet_remove || exit 1;
-	
+
 	# Remove the Sentinel node
 	container_remove || exit 1;
 	
