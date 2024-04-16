@@ -1140,7 +1140,7 @@ function wallet_initialization()
 		MESSAGE+="    !! Please securely save the 24-word mnemonic phrase provided. !!\n"
 		MESSAGE+="    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
 		MESSAGE+="\n"
-		MESSAGE+="It's essential for recovering your wallet if you lose access or forget your password. Loss of this phrase means permanent loss of access to your funds and dVPN node. Store it privately and in multiple safe places.\n\n"
+		MESSAGE+="It's essential for recovering your wallet if you lose access or forget your passphrase. Loss of this phrase means permanent loss of access to your funds and dVPN node. Store it privately and in multiple safe places.\n\n"
 		MESSAGE+="Mnemonic:\n\n${formatted_mnemonic}"
 		whiptail --title "Wallet Mnemonic" --msgbox "$MESSAGE" 22 80
 		
