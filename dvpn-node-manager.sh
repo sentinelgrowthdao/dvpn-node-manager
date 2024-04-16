@@ -1723,14 +1723,14 @@ function ask_moniker()
 function ask_wallet_security()
 {
 	# Define the message
-	MESSAGE="Do you wish to protect your wallet with a password? This will enhance security, but the password will be required every time the node restarts."
+	MESSAGE="Do you wish to protect your wallet with a passphrase? This will enhance security, but the passphrase will be required every time the node restarts."
 	
 	# Display the whiptail dialog box
 	if whiptail --title "Wallet Protection" --yes-button "Yes" --no-button "No" \
 		--yesno "$MESSAGE" 10 78
 	then
 		BACKEND="file"
-		output_info "Wallet protection is set to password-protected."
+		output_info "Wallet protection is set to passphrase-protected."
 	else
 		BACKEND="test"
 		output_info "Wallet protection is disabled."
