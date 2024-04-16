@@ -1704,6 +1704,13 @@ function ask_moniker()
 	VALUE=$(whiptail --inputbox "Please enter your node's moniker (between 4 and 32 characters):" 8 78 "$NODE_MONIKER" \
 		--title "Node Moniker" 3>&1 1>&2 2>&3) || { return 1; }
 	
+	# Remove end of line and spaces at the beginning and end
+	VALUE=$(echo "$VALUE" | tr -d '\r' | xargs)
+	
+	# If VALUE is empty or less than 4 characters or more than 32 characters
+	if [ -z "$VALUE" ] || [ ${#VALUE} -lt 4 ] || [ ${#VALUE} -gt 32 ]
+	then
+		output_error "The moniker must be between 4 and 32 characters."
 		return 2
 	fi
 
