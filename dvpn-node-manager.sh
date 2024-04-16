@@ -1162,7 +1162,12 @@ function wallet_exist()
 		wallet_list_output=$(echo "${WALLET_PASSPHRASE}" | docker run --rm \
 			--interactive \
 			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
-			"${CONTAINER_NAME}" process keys list)
+			"${CONTAINER_NAME}" process keys list 2>&1)
+		
+		# Check for known error messages
+		if echo "$wallet_list_output" | grep -qi "too many failed passphrase attempts"; then
+			return 2
+		fi
 	else
 		wallet_list_output=$(docker run --rm \
 			--interactive \
@@ -1170,8 +1175,9 @@ function wallet_exist()
 			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
 			"${CONTAINER_NAME}" process keys list)
 	fi
+
 	# Use grep to check if the wallet name is in the list
-	if echo "$wallet_list_output" | grep -q "$WALLET_NAME"
+	if echo "$wallet_list_output" | grep -q "\b$WALLET_NAME\b"
 	then
 		return 0
 	else
