@@ -2317,16 +2317,15 @@ function menu_actions()
 		then
 			status_msg="dVPN node Status: Running"
 			CHOICE=$(whiptail --title "Actions" \
-				--yes-button "Select" --no-button "Back" \
+				--ok-button "Select" --cancel-button "Back" \
 				--menu "$status_msg\n\nChoose an option:" 15 78 4 \
 				"Restart" "dVPN Node" \
 				"Stop" "dVPN Node" \
 				"Remove" "only the dVPN Node container" \
-				"Wipe" "dVPN node container, wallet, and configuration folder" 3>&1 1>&2 2>&3)
 		else
 			status_msg="dVPN node Status: Stopped"
 			CHOICE=$(whiptail --title "Actions" \
-				--yes-button "Select" --no-button "Back" \
+				--ok-button "Select" --cancel-button "Back" \
 				--menu "$status_msg\nChoose an option:" 15 78 3 \
 				"Start" "dVPN Node" \
 				"Remove" "Only remove the dVPN Node container" \
