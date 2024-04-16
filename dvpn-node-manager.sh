@@ -1819,7 +1819,8 @@ function install_input_prompt()
 			1)
 				if ask_abort_installation
 				then
-					output_info "Installation aborted."
+					output_info "Installation aborted, please wait...";
+					action_uninstall
 					return 1;
 				fi
 				;;
