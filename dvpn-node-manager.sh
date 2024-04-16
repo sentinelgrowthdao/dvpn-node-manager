@@ -1055,7 +1055,8 @@ function wallet_initialization()
 		while true
 		do
 			# Ask for mnemonic and store un MNEMONIC variable
-			MNEMONIC=$(whiptail --inputbox "Please enter your wallet's mnemonic:" 8 78 --title "Wallet Mnemonic" 3>&1 1>&2 2>&3) || { output_error "Failed to get mnemonic."; return 1; }
+			MNEMONIC=$(whiptail --inputbox "Please enter your wallet's mnemonic:" 8 78 \
+				--title "Wallet Mnemonic" 3>&1 1>&2 2>&3) || { output_error "Failed to get mnemonic."; return 1; }
 			# If mnemonic is not empty, break loop
 			if [ ! -z "$MNEMONIC" ]
 			then
@@ -1442,6 +1443,8 @@ function firewall_delete_port()
 # Function to ask for remote IP
 function ask_remote_ip()
 {
+	local VALUE=""
+
 	# If NODE_IP egale to 0.0.0.0 or empty, then retrieve the current public IP
 	if [ "$NODE_IP" = "0.0.0.0" ] || [ -z "$NODE_IP" ];
 	then
@@ -1449,7 +1452,8 @@ function ask_remote_ip()
 	fi
 	
 	# Ask for remote IP
-	local VALUE=$(whiptail --inputbox "Please enter your node's public IP address:" 8 78 "$NODE_IP" --title "Node IP" 3>&1 1>&2 2>&3) || return 1;
+	VALUE=$(whiptail --inputbox "Please enter your node's public IP address:" 8 78 "$NODE_IP" \
+		--title "Node IP" 3>&1 1>&2 2>&3) || return 1;
 	
 	# Check if the user pressed Cancel
 	if [ $? -ne 0 ]
@@ -1477,7 +1481,7 @@ function ask_node_port()
 	do
 		# Ask for node port
 		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for the node:" 8 78 "$NODE_PORT" \
-			--title "Node Port" 3>&1 1>&2 2>&3) || { echo "Failed to get node port" && return 1; }
+			--title "Node Port" 3>&1 1>&2 2>&3) || { return 1; }
 		# If value is not empty and is integer (between 1024 and 65535) and different of $WIREGUARD_PORT or $V2RAY_PORT
 		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]] && \
 			[[ "$VALUE" -ge 1024 ]] && [[ "$VALUE" -le 65535 ]] && \
@@ -1555,7 +1559,7 @@ function ask_v2ray_port()
 	do
 		# Ask for node port
 		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for V2Ray:" 8 78 "$V2RAY_PORT" \
-			--title "V2Ray Port" 3>&1 1>&2 2>&3) || { echo "Failed to get node port" && return 1; }
+			--title "V2Ray Port" 3>&1 1>&2 2>&3) || { return 1; }
 		# If value is not empty and is integer and is different of $NODE_PORT
 		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]] && [[ "$VALUE" -ne "$NODE_PORT" ]]
 		then
@@ -1674,15 +1678,12 @@ function ask_node_type()
 # Function to ask for max peers
 function ask_max_peers()
 {
-	# Ask for max peers
-	local VALUE=$(whiptail --inputbox "Please enter the maximum number of peers you want to connect to:" 8 78 "$MAX_PEERS" --title "Max Peers" 3>&1 1>&2 2>&3)
+	local VALUE=""
 	
-	# Check if the user pressed Cancel
-	if [ $? -ne 0 ]
-	then
-		return 1
-	fi
-
+	# Ask for max peers
+	VALUE=$(whiptail --inputbox "Please enter the maximum number of peers you want to connect to:" 8 78 "$MAX_PEERS" \
+		--title "Max Peers" 3>&1 1>&2 2>&3) || { return 1; }
+	
 	# Check if the user entered a value
 	if [ -z "$VALUE" ]
 	then
@@ -1697,18 +1698,12 @@ function ask_max_peers()
 # Function to ask for moniker
 function ask_moniker()
 {
+	local VALUE=""
+	
 	# Ask for moniker
-	local VALUE=$(whiptail --inputbox "Please enter your node's moniker:" 8 78 "$NODE_MONIKER" --title "Node Moniker" 3>&1 1>&2 2>&3)
-
-	# Check if the user pressed Cancel
-	if [ $? -ne 0 ]
-	then
-		return 1
-	fi
-
-	# Check if the user entered a value
-	if [ -z "$VALUE" ]
-	then
+	VALUE=$(whiptail --inputbox "Please enter your node's moniker (between 4 and 32 characters):" 8 78 "$NODE_MONIKER" \
+		--title "Node Moniker" 3>&1 1>&2 2>&3) || { return 1; }
+	
 		return 2
 	fi
 
