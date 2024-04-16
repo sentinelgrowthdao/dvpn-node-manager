@@ -886,6 +886,7 @@ function container_start()
 			nohup bash -c "echo '${WALLET_PASSPHRASE}' | docker run --rm \
 				--interactive \
 				--name ${CONTAINER_NAME} \
+				--sig-proxy=false \
 				--volume ${CONFIG_DIR}:/root/.sentinelnode \
 				--volume /lib/modules:/lib/modules \
 				--cap-drop ALL \
@@ -932,6 +933,7 @@ function container_start()
 			nohup bash -c "echo '${WALLET_PASSPHRASE}' | docker run --rm \
 				--interactive \
 				--name ${CONTAINER_NAME} \
+				--sig-proxy=false \
 				--volume "${CONFIG_DIR}:/root/.sentinelnode" \
 				--publish ${NODE_PORT}:${NODE_PORT}/tcp \
 				--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
