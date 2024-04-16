@@ -1763,7 +1763,7 @@ function ask_wallet_passphrase()
 	while true
 	do
 		# Ask for wallet passphrase
-		WALLET_PASSPHRASE=$(whiptail --passwordbox "Please enter your wallet passphrase:" 8 78 \
+		WALLET_PASSPHRASE=$(whiptail --passwordbox "Please enter your wallet passphrase (at least 8 characters):" 8 78 \
 			--title "Wallet Passphrase" 3>&1 1>&2 2>&3) || return 1;
 		
 		# Check if the user pressed Cancel
@@ -1778,7 +1778,17 @@ function ask_wallet_passphrase()
 		# Check that the user has entered a non-empty value of at least 8 characters.
 		if [ ! -z "$WALLET_PASSPHRASE" ] && [ ${#WALLET_PASSPHRASE} -ge 8 ]
 		then
-			break
+			# Check if the wallet exists
+			wallet_exist
+			local wallet_status=$?
+			# If wallet cannot be unlocked, display an error message
+			if [ $wallet_status -eq 2 ]
+			then
+				output_error "The wallet cannot be unlocked with this passphrase."
+			else
+				# Wallet can be unlocked or does not exist
+				break
+			fi
 		fi
 	done
 	
