@@ -1968,36 +1968,37 @@ function menu_installation()
 	# If Moniker is empty, ask for Moniker
 	if [ -z "$NODE_MONIKER" ] || [ $config_created = true ]
 	then
-		ask_moniker || { output_error "Failed to get moniker."; return 1; }
+		install_input_prompt "ask_moniker" || return 1;
 		config_changed=true;
 	fi
 	
 	# If Node Location is empty, ask for Node Location
 	if [ -z "$NODE_LOCATION" ] || [ $config_created = true ]
 	then
-		ask_node_location || { output_error "Failed to get validation node type."; return 1; }
+		install_input_prompt "ask_node_location" || return 1;
 		config_changed=true;
 	fi
 	
 	# If Node Type is empty, ask for Node Type
 	if [ -z "$NODE_TYPE" ] || [ $config_created = true ]
 	then
-		ask_node_type || { output_error "Failed to get node type."; return 1; }
+		install_input_prompt "ask_node_type" || return 1;
 		config_changed=true;
-		
+
 		# Generate WireGuard or V2Ray configurations
 		generate_vpn_config || { output_error "Failed to generate vpn configuration."; return 1; }
-		# Load VPN configuration into variables
-		load_vpn_config || { output_error "Failed to load vpn configuration."; return 1; }
 	fi
 	
 	# If Remote IP is empty, ask for Remote IP
 	if [ -z "$NODE_IP" ] || [ $config_created = true ]
 	then
-		ask_remote_ip || { output_error "Failed to get node IP."; return 1; }
+		# Load VPN configuration into variables
+		load_vpn_config || { output_error "Failed to load vpn configuration."; return 1; }
+
+		install_input_prompt "ask_remote_ip" || return 1;
+		install_input_prompt "ask_node_port" || return 1;
+		install_input_prompt "ask_vpn_port" || return 1;
 		config_changed=true;
-		ask_node_port
-		ask_vpn_port
 	fi
 	
 	# If Configuration has changed then refresh configuration files
