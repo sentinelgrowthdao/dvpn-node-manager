@@ -973,7 +973,8 @@ function container_stop()
 function container_restart()
 {
 	output_info "Please wait while the dVPN node container is being restarted..."
-	docker restart ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to restart the dVPN node container."; return 1; }
+	container_stop
+	container_start
 	output_success "dVPN node container has been restarted successfully."
 	return 0;
 }
