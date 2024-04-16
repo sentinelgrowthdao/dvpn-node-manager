@@ -19,18 +19,17 @@ CONFIG_TLS_KEY="${CONFIG_DIR}/tls.key"
 
 # Configuration variables
 CONTAINER_NAME="sentinel-dvpn-node"
-FIREWALL="ufw"
 NODE_MONIKER=""
-NODE_TYPE="wireguard"
+NODE_TYPE=""
 NODE_IP="0.0.0.0"
 NODE_COUNTRY="NA"
-NODE_PORT=16567
+NODE_PORT=
 NODE_LOCATION="datacenter"
-WIREGUARD_PORT=16568
-V2RAY_PORT=16568
+WIREGUARD_PORT=
+V2RAY_PORT=
 WALLET_NAME="operator"
 MAX_PEERS=250
-HANDSHAKE_ENABLE="true"
+HANDSHAKE_ENABLE=""
 
 # Fixed values loaded from api "dvpn-node/configuration" (except for BACKEND)
 BACKEND="test"
