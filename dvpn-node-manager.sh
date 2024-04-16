@@ -2264,7 +2264,6 @@ function menu_wallet()
 # Function to display the certificate information
 function menu_certificate()
 {
-	
 	while true;
 	do
 		# Display certificate information
@@ -2302,6 +2301,8 @@ function menu_certificate()
 			break
 		fi
 	done
+	
+	return 0;
 }
 
 # Function to display the node menu
