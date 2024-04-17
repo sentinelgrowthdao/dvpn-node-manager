@@ -1,30 +1,20 @@
-dvpn-node-manager (1.3-1) unstable; urgency=medium
+dvpn-node-manager (1.0.0-alpha2) unstable; urgency=low
 
-- Changing docker commands to launch a wallet protected by a passphrase
+- Second alpha release with further developments and refinements.
+- Includes additional experimental features not present in alpha1.
+- Enhanced architectural modifications for better performance and scalability.
+- This version continues to be in a testing phase and is not recommended for production environments.
 
--- FoxinouFr <foxinou@foxinodes.net> Mon, 17 Apr 2024 11:00:00 +0000
+-- FoxinouFr <foxinou@foxinodes.net> Tue, 17 Apr 2024 20:00:00 +0000
 
-dvpn-node-manager (1.2-1) unstable; urgency=medium
+dvpn-node-manager (1.0.0-alpha1) unstable; urgency=low
 
-- Fix package uninstall script to execute `dvpn-node-manager uninstall force` command.
-- Add a question to allow the user to interrupt the installation process.
-- Fix wallet management protected by a passphrase
-- Bug fixes and improvements.
-
--- FoxinouFr <foxinou@foxinodes.net> Mon, 16 Apr 2024 21:00:00 +0000
-
-dvpn-node-manager (1.1-1) unstable; urgency=medium
-
-- Updated dVPN Node Manager script package.
-- Fixed various bugs and issues.
-- Added support for wallets protected by a passphrase.
-
--- FoxinouFr <foxinou@foxinodes.net> Mon, 15 Apr 2024 23:30:00 +0000
-
-dvpn-node-manager (1.0-1) unstable; urgency=low
-
-- Initial release of the dVPN Node Manager script package.
-- Includes Docker installation and node management functionalities.
-- Include a set of commands to manage the dVPN node.
+- Initial alpha release marking the start of major overhauls in the dVPN Node Manager.
+- Combines foundational changes and feature introductions:
+  - New Docker installation and node management capabilities.
+  - Revamped script package to support enhanced wallet security with passphrase protection.
+  - Updated uninstall script to ensure robust removal with `dvpn-node-manager uninstall force` command.
+  - Implementation of interactive prompts during installation to enhance user control.
+  - Addressed numerous known issues and bugs, setting the stage for upcoming alpha releases.
 
 -- FoxinouFr <foxinou@foxinodes.net> Fri, 14 Apr 2024 12:00:00 +0000
