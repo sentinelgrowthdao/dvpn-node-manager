@@ -869,8 +869,18 @@ function container_start()
 		# Check if the container is not running
 		if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"
 		then
-			# Container is not running, attempt to start it
-			docker start ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to start the dVPN node container."; return 1; }
+			# If passphrase is required
+			if [ "$BACKEND" == "file" ]
+			then
+				nohup bash -c "echo '${WALLET_PASSPHRASE}' | docker start -ai \
+					--detach-keys="ctrl-q" ${CONTAINER_NAME}" > /dev/null 2>&1  &
+				disown
+				# Wait for 5 seconds
+				sleep 5
+			else
+				# Container is not running, attempt to start it
+				docker start ${CONTAINER_NAME} > /dev/null 2>&1 || { output_error "Failed to start the dVPN node container."; return 1; }
+			fi
 			output_success "dVPN node container has been started successfully."
 		fi
 		return 0
@@ -883,10 +893,11 @@ function container_start()
 		if [ "$BACKEND" == "file" ]
 		then
 			# Start WireGuard node
-			nohup bash -c "echo '${WALLET_PASSPHRASE}' | docker run --rm \
+			nohup bash -c "echo '${WALLET_PASSPHRASE}' | docker run \
 				--interactive \
 				--name ${CONTAINER_NAME} \
 				--sig-proxy=false \
+				--detach-keys="ctrl-q" \
 				--volume ${CONFIG_DIR}:/root/.sentinelnode \
 				--volume /lib/modules:/lib/modules \
 				--cap-drop ALL \
@@ -930,10 +941,11 @@ function container_start()
 		if [ "$BACKEND" == "file" ]
 		then
 			# Start V2Ray node
-			nohup bash -c "echo '${WALLET_PASSPHRASE}' | docker run --rm \
+			nohup bash -c "echo '${WALLET_PASSPHRASE}' | docker run \
 				--interactive \
 				--name ${CONTAINER_NAME} \
 				--sig-proxy=false \
+				--detach-keys="ctrl-q" \
 				--volume "${CONFIG_DIR}:/root/.sentinelnode" \
 				--publish ${NODE_PORT}:${NODE_PORT}/tcp \
 				--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
