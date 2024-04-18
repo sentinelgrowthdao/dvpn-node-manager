@@ -49,7 +49,7 @@ For users on Debian-based systems, the `dvpn-node-manager` is available as a `.d
 You can download the `.deb` package using the following command:
 
 ```bash
-sudo curl -o /var/cache/apt/archives/dvpn-node-manager_1.3-1_all.deb https://files.foxinodes.net/sentinel/dvpn-node-manager_1.3-1_all.deb && sudo chmod 644 /var/cache/apt/archives/dvpn-node-manager_1.3-1_all.deb && sudo chown _apt:root /var/cache/apt/archives/dvpn-node-manager_1.3-1_all.deb
+sudo curl -o /var/cache/apt/archives/dvpn-node-manager_1.0.0-alpha2_all.deb https://github.com/sentinelgrowthdao/dvpn-node-manager/releases/download/v1.0.0-alpha2/dvpn-node-manager_1.0.0-alpha2_all.deb && sudo chmod 644 /var/cache/apt/archives/dvpn-node-manager_1.0.0-alpha2_all.deb && sudo chown _apt:root /var/cache/apt/archives/dvpn-node-manager_1.0.0-alpha2_all.deb
 ```
 
 **Installing the Package**
@@ -57,7 +57,7 @@ sudo curl -o /var/cache/apt/archives/dvpn-node-manager_1.3-1_all.deb https://fil
 Installing the package using the `apt` package manager:
 
 ```bash
-sudo apt install /var/cache/apt/archives/dvpn-node-manager_1.3-1_all.deb
+sudo apt install /var/cache/apt/archives/dvpn-node-manager_1.0.0-alpha2_all.deb
 ```
 
 This command will install the dvpn-node-manager script and all necessary dependencies on your system. The package takes care of setting up everything needed for the script to run.
@@ -77,7 +77,7 @@ This command will launch the dVPN Node Manager, allowing you to manage your dVPN
 If you wish to uninstall the dVPN Node Manager, you can do so by executing:
 
 ```bash
-sudo apt autoremove /var/cache/apt/archives/dvpn-node-manager_1.3-1_all.deb
+sudo apt autoremove /var/cache/apt/archives/dvpn-node-manager_1.0.0-alpha2_all.deb
 ```
 
 This command will remove the dvpn-node-manager package from your system, as well as all configurations, docker images and containers.
