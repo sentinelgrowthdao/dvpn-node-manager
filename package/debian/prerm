@@ -1,4 +1,0 @@
-#!/bin/sh
-
-# Execute the uninstall script
-dvpn-node-manager uninstall force
