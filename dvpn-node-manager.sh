@@ -806,6 +806,13 @@ function docker_usermod()
 	# Check if the user is in the docker group
 	if ! groups "$SUDO_USER" | grep -q "\bdocker\b"
 	then
+		# Check if docker group does not exist
+		if ! getent group docker &> /dev/null
+		then
+			# Create the docker group
+			groupadd docker || { output_error "Failed to create docker group."; return 1; }
+			output_info "Docker group has been created."
+		fi
 		# Add the user to the docker group
 		usermod -aG docker ${USER_NAME} || { output_error "Failed to add user to docker group."; return 1; }
 		output_info "User added to docker group."
