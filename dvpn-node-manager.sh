@@ -59,6 +59,10 @@ FIREWALL_PREVIOUS_NODE_PORT=0
 FIREWALL_PREVIOUS_WIREGUARD_PORT=0
 FIREWALL_PREVIOUS_V2RAY_PORT=0
 FIREWALL_PREVIOUS_NODE_TYPE=""
+UPNP_PREVIOUS_NODE_PORT=0
+UPNP_PREVIOUS_WIREGUARD_PORT=0
+UPNP_PREVIOUS_V2RAY_PORT=0
+UPNP_PREVIOUS_NODE_TYPE=""
 
 # API URLs
 API_BALANCE=(
@@ -1479,6 +1483,155 @@ function firewall_delete_port()
 }
 
 ####################################################################################################
+# UPnP functions
+####################################################################################################
+
+# Function to open UPnP ports
+function upnp_configure()
+{
+	# Check if upnpc is not installed
+	if ! command -v upnpc &> /dev/null
+	then
+		# Install upnpc
+		output_info "Installing UPnP, please wait..."
+		apt install -y miniupnpc || { output_error "Failed to install UPnP."; return 1; }
+	fi
+	
+	# Check if UPnP is enabled
+	if upnpc -l 2>&1 | grep -q "No IGD UPnP Device found on the network !"
+	then
+		output_error "UPnP is not enabled on the network. Please enable UPnP on your router and try again or configure port forwarding manually."
+		return 0;
+	fi
+	
+	output_info "Configuring UPnP, please wait..."
+	
+	# If previous node port is not empty and different from 0
+	if [ ! -z "$UPNP_PREVIOUS_NODE_PORT" ] && [ "$UPNP_PREVIOUS_NODE_PORT" -ne 0 ]
+	then
+		upnp_remove_port $UPNP_PREVIOUS_NODE_PORT "tcp" || { output_error "Failed to remove previous node port forwarding."; return 1; }
+		UPNP_PREVIOUS_NODE_PORT=0;
+	fi
+	
+	# If node type is WireGuard and WireGuard port is not empty
+	if [ "$NODE_TYPE" = "wireguard" ] && [ ! -z "$WIREGUARD_PORT" ]
+	then
+		upnp_remove_port $UPNP_PREVIOUS_WIREGUARD_PORT "udp" || { output_error "Failed to remove previous WireGuard port forwarding."; return 1; }
+		UPNP_PREVIOUS_WIREGUARD_PORT=0;
+	fi
+	
+	# If node type is V2Ray and V2Ray port is not empty
+	if [ "$NODE_TYPE" = "v2ray" ] && [ ! -z "$V2RAY_PORT" ]
+	then
+		upnp_remove_port $UPNP_PREVIOUS_V2RAY_PORT "tcp" || { output_error "Failed to remove previous V2Ray port forwarding."; return 1; }
+		UPNP_PREVIOUS_V2RAY_PORT=0;
+	fi
+	
+	# If previous node type is not empty and types are different
+	if [ ! -z "$UPNP_PREVIOUS_NODE_TYPE" ] && [ "$UPNP_PREVIOUS_NODE_TYPE" != "$NODE_TYPE" ]
+	then
+		# If previous node type is WireGuard
+		if [ "$UPNP_PREVIOUS_NODE_TYPE" = "wireguard" ]
+		then
+			upnp_remove_port $WIREGUARD_PORT "udp" || { output_error "Failed to remove previous WireGuard port forwarding."; return 1; }
+			UPNP_PREVIOUS_WIREGUARD_PORT=0;
+		# If previous node type is V2Ray
+		elif [ "$UPNP_PREVIOUS_NODE_TYPE" = "v2ray" ]
+		then
+			upnp_remove_port $V2RAY_PORT "tcp" || { output_error "Failed to remove previous V2Ray port forwarding."; return 1; }
+			UPNP_PREVIOUS_V2RAY_PORT=0;
+		fi
+	fi
+	# Delete the previous node type value as the information is no longer useful
+	UPNP_PREVIOUS_NODE_TYPE="";
+	
+	# Get the local IP address
+	local LOCAL_IP=$(ip addr show | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d/ -f1 | head -n 1)
+	
+	# Add ports to UPnP
+	upnp_enable_port $LOCAL_IP $NODE_PORT "tcp" || { output_error "Failed to enable node port forwarding."; return 1; }
+	if [ "$NODE_TYPE" = "wireguard" ]
+	then
+		upnp_enable_port $LOCAL_IP $WIREGUARD_PORT "udp" || { output_error "Failed to enable WireGuard port forwarding."; return 1; }
+	elif [ "$NODE_TYPE" = "v2ray" ]
+	then
+		upnp_enable_port $LOCAL_IP $V2RAY_PORT "tcp" || { output_error "Failed to enable V2Ray port forwarding."; return 1; }
+	fi
+	
+	output_success "UPnP has been configured successfully."
+	
+	return 0;
+}
+
+# Function to delete all UPnP rules
+function upnp_reset()
+{
+	# If upnpc is not installed, return 0
+	if ! command -v upnpc &> /dev/null
+	then
+		return 0;
+	fi
+	
+	# Remove all port forwarding rules
+	upnp_remove_port $NODE_PORT "tcp" || { output_error "Failed to remove node port forwarding."; return 1; }
+	if [ "$NODE_TYPE" = "wireguard" ]
+	then
+		upnp_remove_port $WIREGUARD_PORT "udp" || { output_error "Failed to remove WireGuard port forwarding."; return 1; }
+	elif [ "$NODE_TYPE" = "v2ray" ]
+	then
+		upnp_remove_port $V2RAY_PORT "tcp" || { output_error "Failed to reove V2Ray port forwarding."; return 1; }
+	fi
+	
+	return 0;
+}
+
+# Function to enable port forwarding with UPnP
+function upnp_enable_port()
+{
+	local LOCAL_IP=$1
+	local PORT=$2
+	local PROTOCOL=$3
+	local LEASE_DURATION=${4:-0}
+	
+	# Check parameters
+	if [ ! -z "$PORT" ] && [[ "$PORT" =~ ^[0-9]+$ ]] && \
+		[[ "$PORT" -ge 1024 ]] && [[ "$PORT" -le 65535 ]] && \
+		[ ! -z "$LOCAL_IP" ] && [[ "$LOCAL_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && \
+		[ ! -z "$PROTOCOL" ] && [[ "$PROTOCOL" =~ ^(tcp|udp)$ ]] && \
+		[[ "$LEASE_DURATION" =~ ^[0-9]+$ ]] && [[ "$LEASE_DURATION" -ge 0 ]]
+	then
+		# Allow port to UPnP if not already allowed
+		if ! upnpc -l | grep -q "${PORT}/${PROTOCOL}"
+		then
+		echo "upnpc -a $LOCAL_IP $PORT $PORT $PROTOCOL $LEASE_DURATION"
+			upnpc -a $LOCAL_IP $PORT $PORT $PROTOCOL $LEASE_DURATION > /dev/null 2>&1 || return 1;
+			output_success "Port forwarding ${PORT}/${PROTOCOL} to ${LOCAL_IP} with UPnP enabled"
+		fi
+	fi
+	
+	return 0;
+}
+
+# Function to remove port forwarding with UPnP
+function upnp_remove_port()
+{
+	local PORT=$1
+	local PROTOCOL=$2
+	
+	# If port is not empty, is a number between 1024 and 65535 and protocol is tcp or udp
+	if [ ! -z "$PORT" ] && [[ "$PORT" =~ ^[0-9]+$ ]] && \
+		[[ "$PORT" -ge 1024 ]] && [[ "$PORT" -le 65535 ]] && \
+		[ ! -z "$PROTOCOL" ] && [[ "$PROTOCOL" =~ ^(tcp|udp)$ ]]
+	then
+	echo "upnpc -d ${PORT} ${PROTOCOL}"
+		upnpc -d ${PORT} ${PROTOCOL} > /dev/null 2>&1 || return 1;
+		output_success "Port forwarding ${PORT}/${PROTOCOL} with UPnP disabled"
+	fi
+	
+	return 0;
+}
+
+####################################################################################################
 # Prompt functions
 ####################################################################################################
 
@@ -1538,10 +1691,13 @@ function ask_node_port()
 	then
 		# Store the value in FIREWALL_PREVIOUS_NODE_PORT to delete it from the firewall
 		FIREWALL_PREVIOUS_NODE_PORT=$NODE_PORT
+		# Store the value in UPNP_PREVIOUS_NODE_PORT to delete it from router
+		UPNP_PREVIOUS_NODE_PORT=$NODE_PORT
 		# Set value received from whiptail to NODE_PORT
 		NODE_PORT=$VALUE
 	else
 		FIREWALL_PREVIOUS_NODE_PORT=0
+		UPNP_PREVIOUS_NODE_PORT=0
 	fi
 	
 	return 0;
@@ -1583,10 +1739,13 @@ function ask_wireguard_port()
 	then
 		# Store the value in FIREWALL_PREVIOUS_WIREGUARD_PORT to delete it from the firewall
 		FIREWALL_PREVIOUS_WIREGUARD_PORT=$WIREGUARD_PORT
+		# Store the value in UPNP_PREVIOUS_WIREGUARD_PORT to delete it from router
+		UPNP_PREVIOUS_WIREGUARD_PORT=$WIREGUARD_PORT
 		# Set value received from whiptail to WIREGUARD_PORT
 		WIREGUARD_PORT=$VALUE
 	else
 		FIREWALL_PREVIOUS_WIREGUARD_PORT=0
+		UPNP_PREVIOUS_WIREGUARD_PORT=0
 	fi
 	
 	return 0;
@@ -1614,10 +1773,13 @@ function ask_v2ray_port()
 	then
 		# Store the value in FIREWALL_PREVIOUS_V2RAY_PORT to delete it from the firewall
 		FIREWALL_PREVIOUS_V2RAY_PORT=$V2RAY_PORT
+		# Store the value in UPNP_PREVIOUS_V2RAY_PORT to delete it from router
+		UPNP_PREVIOUS_V2RAY_PORT=$V2RAY_PORT
 		# Set value received from whiptail to V2RAY_PORT
 		V2RAY_PORT=$VALUE
 	else
 		FIREWALL_PREVIOUS_V2RAY_PORT=0
+		UPNP_PREVIOUS_V2RAY_PORT=0
 	fi
 	
 	return 0;
@@ -1634,6 +1796,38 @@ function ask_firewall_configure()
 	fi
 	
 	firewall_configure || return 1;
+	
+	return 0;
+}
+
+# Function to ask for configure UPnP
+function ask_upnp_configure()
+{
+	local MESSAGE=$1
+	
+	# If node is not residential, UPnP is not required
+	if [ "$NODE_LOCATION" != "residential" ]
+	then
+		return 0;
+	fi
+	
+	# Get the local IP address
+	local LOCAL_IP=$(ip addr show | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d/ -f1 | head -n 1)
+	
+	# Compare the local IP address with the remote IP address
+	if [ "$LOCAL_IP" == "$NODE_IP" ]
+	then
+		# The local IP address is the same as the remote IP address. UPnP is not required.
+		return 0;
+	fi
+	
+	# Ask if user wants to configure the UPnP port forwarding
+	if ! whiptail --title "UPnP Configuration" --yesno "$MESSAGE" 8 78
+	then
+		return 0;
+	fi
+	
+	upnp_configure || return 1;
 	
 	return 0;
 }
@@ -1701,9 +1895,11 @@ function ask_node_type()
 	
 	# Remember previous node type to update firewall configuration
 	FIREWALL_PREVIOUS_NODE_TYPE=$NODE_TYPE
+	# Remember previous node port to update upnp configuration
+	UPNP_PREVIOUS_NODE_PORT=$NODE_PORT
 	# Set value received from whiptail to NODE_TYPE
 	NODE_TYPE=$VALUE
-
+	
 	# If node type is V2Ray
 	if [ "$NODE_TYPE" == "v2ray" ];
 	then
@@ -2048,9 +2244,11 @@ function menu_installation()
 		# Refresh configuration files
 		refresh_config_files || return 1;
 		# If configuration has changed, ask user to configure the firewall
-		ask_firewall_configure "Do you want to automatically configure the firewall to allow incoming connections to the node?" || return 1;
+		ask_firewall_configure "Do you want to automatically configure the local firewall to allow incoming connections to the node?" || return 1;
+		# If configuration has changed, ask user to configure UPnP
+		ask_upnp_configure "Do you want to automatically configure UPnP port forwarding to allow incoming connections to the node?" || return 1;
 	fi
-
+	
 	# Ask the user to enter his passphrase for the rest of the run
 	ask_wallet_passphrase || { output_error "Failed to get wallet passphrase, installation cannot continue."; return 1; }
 	
@@ -2229,7 +2427,8 @@ function menu_settings()
 			2)
 				if ask_remote_ip && ask_node_port && ask_vpn_port
 				then
-					ask_firewall_configure "Do you want to apply automatic port changes to the firewall?" || return 1;
+					ask_firewall_configure "Do you want to apply port changes to the local firewall?" || return 1;
+					ask_upnp_configure "Do you want to apply automatic port changes to the router?" || return 1;
 					refresh_config_files || return 1;
 					container_remove || return 1;
 					container_start || return 1;
