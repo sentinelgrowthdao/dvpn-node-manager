@@ -61,8 +61,11 @@ FIREWALL_PREVIOUS_V2RAY_PORT=0
 FIREWALL_PREVIOUS_NODE_TYPE=""
 
 # API URLs
-GROWTHDAO_API_BALANCE="https://api.sentinelgrowthdao.com/cosmos/bank/v1beta1/balances/"
-TRINITY_API_BALANCE="https://api.trinityvalidator.com/cosmos/bank/v1beta1/balances/"
+API_BALANCE=(
+	"https://api-sentinel.busurnode.com/cosmos/bank/v1beta1/balances/"
+	"https://api.sentinel.quokkastake.io/cosmos/bank/v1beta1/balances/"
+	"https://wapi.foxinodes.net/api/v1/sentinel/address/"
+)
 FOXINODES_API_CHECK_IP="https://wapi.foxinodes.net/api/v1/sentinel/check-ip"
 FOXINODES_API_DVPN_CONFIG="https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/configuration"
 FOXINODES_API_CHECK_PORT="https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/check-port/"
@@ -1280,15 +1283,20 @@ function wallet_balance()
 	# Show waiting message
 	output_info "Please wait while the balance of ${PUBLIC_ADDRESS} is being retrieved..."
 	
-	# Get wallet balance from remote API
-	local API_RESPONSE=$(curl -s "${GROWTHDAO_API_BALANCE}${PUBLIC_ADDRESS}")
+	local API_RESPONSE=""
 	
-	# If API is unreachable (empty response)
-	if [ -z "$API_RESPONSE" ]
-	then
-		output_info "Main API is unreachable. Trying another API..."
-		API_RESPONSE=$(curl -s -f "${TRINITY_API_BALANCE}${PUBLIC_ADDRESS}")
-	fi
+	# Loop through the API URLs
+	for URL in "${API_BALANCE[@]}"
+	do
+		API_RESPONSE=$(curl -s "${URL}${PUBLIC_ADDRESS}")
+		# If API response is not empty, break the loop
+		if [ -n "$API_RESPONSE" ]
+		then
+			break
+		else
+			output_info "API ${URL} is unreachable. Trying another API..."
+		fi
+	done
 	
 	# Reset values
 	WALLET_BALANCE="0 DVPN"
@@ -1298,7 +1306,7 @@ function wallet_balance()
 	# If the value is empty, return 1
 	if [ -z "$API_RESPONSE" ]
 	then
-		output_info "API response is empty."
+		output_info "Failed to retrieve wallet balance."
 		return 1;
 	fi
 	
