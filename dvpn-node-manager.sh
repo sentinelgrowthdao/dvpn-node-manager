@@ -524,17 +524,17 @@ function os_ubuntu()
 	local os_name=$(lsb_release -is)
 	if [[ "$os_name" != "Ubuntu" ]]
 	then
-		return 1
+		return 1;
 	fi
-
+	
 	local version=$(lsb_release -rs)
 	if [[ "$version" == "18."* || "$version" == "19."* || "$version" == "20."* || \
 		"$version" == "21."* || "$version" == "22."* || "$version" == "23."* || \
 		"$version" == "24."* ]]
 	then
-		return 0  
+		return 0;
 	else
-		return 1  
+		return 1;
 	fi
 }
 
@@ -545,9 +545,29 @@ function os_raspbian()
 	local arm_check=$(uname -a | egrep "aarch64|arm64|armv7" | wc -l)
 	if [ ${raspbian_check} == 1 ] || [ ${arm_check} == 1 ]
 	then
-		return 0  
+		return 0;
 	else
-		return 1 
+		return 1;
+	fi
+}
+
+# Function to check if the OS is Debian
+function os_debian()
+{
+	# Check if the OS is Debian
+	local os_name=$(lsb_release -is)
+	if [[ "$os_name" != "Debian" ]]
+	then
+		return 1;
+	fi
+	
+	local version=$(lsb_release -rs)
+	if [[ "$version" == "9."* || "$version" == "10."* || "$version" == "11."* || \
+		"$version" == "12."* || "$version" == "13."* ]]
+	then
+		return 0;
+	else
+		return 1;
 	fi
 }
 
@@ -839,7 +859,7 @@ function container_install()
 		return 0
 	fi
 	
-	if os_ubuntu
+	if os_ubuntu || os_debian
 	then
 		IMAGE="ghcr.io/sentinel-official/dvpn-node:latest"
 	elif os_raspbian
@@ -855,7 +875,7 @@ function container_install()
 			return 1
 		fi
 	else
-		output_error "Unsupported OS. Please use Ubuntu or Raspbian."
+		output_error "Unsupported OS. Please use Ubuntu, Debian, or Raspbian."
 		return 1
 	fi
 	
