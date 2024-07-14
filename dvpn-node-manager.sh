@@ -567,8 +567,8 @@ function os_debian()
 	fi
 	
 	local version=$(lsb_release -rs)
-	if [[ "$version" == "9."* || "$version" == "10."* || "$version" == "11."* || \
-		"$version" == "12."* || "$version" == "13."* ]]
+	if [[ "$version" == "9" || "$version" == "10" || "$version" == "11" || \
+		"$version" == "12" || "$version" == "13" ]]
 	then
 		return 0;
 	else
