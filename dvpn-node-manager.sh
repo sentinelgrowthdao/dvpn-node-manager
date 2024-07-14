@@ -70,6 +70,11 @@ FOXINODES_API_CHECK_IP="https://wapi.foxinodes.net/api/v1/sentinel/check-ip"
 FOXINODES_API_DVPN_CONFIG="https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/configuration"
 FOXINODES_API_CHECK_PORT="https://wapi.foxinodes.net/api/v1/sentinel/dvpn-node/check-port/"
 
+# If SUDO_USER is not set, set it to the current user executing the script
+if [ -z "$SUDO_USER" ]; then
+	export SUDO_USER=$(whoami)
+fi
+
 ####################################################################################################
 # Configuration functions
 ####################################################################################################
