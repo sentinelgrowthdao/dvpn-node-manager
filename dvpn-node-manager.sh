@@ -864,10 +864,7 @@ function container_install()
 		return 0
 	fi
 	
-	if os_ubuntu || os_debian
-	then
-		IMAGE="ghcr.io/sentinel-official/dvpn-node:latest"
-	elif os_raspbian
+	if os_raspbian
 	then
 		if [[ $(arch) == "arm"* ]]
 		then
@@ -879,6 +876,9 @@ function container_install()
 			output_error "Unsupported architecture. Please use ARMv7 or ARM64."
 			return 1
 		fi
+	elif os_ubuntu || os_debian
+	then
+		IMAGE="ghcr.io/sentinel-official/dvpn-node:latest"
 	else
 		output_error "Unsupported OS. Please use Ubuntu, Debian, or Raspbian."
 		return 1
