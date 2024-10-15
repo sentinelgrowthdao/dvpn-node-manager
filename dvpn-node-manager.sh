@@ -1669,7 +1669,7 @@ function ask_node_location()
 	# Set initial state based on current $NODE_LOCATION
 	local datacenter_state="OFF"
 	local residential_state="OFF"
-
+	
 	if [ "$NODE_LOCATION" == "datacenter" ]
 	then
 		datacenter_state="ON"
@@ -1681,9 +1681,9 @@ function ask_node_location()
 	fi
 	
 	# Ask for node location using whiptail
-	local VALUE=$(whiptail --title "Node Location" --radiolist "Please select the type of validation node you want to run:" 15 78 2 \
-		"datacenter" "Your node is physically located in a datacenter" $datacenter_state \
-		"residential" "Your node is physically in a house" $residential_state 3>&1 1>&2 2>&3) || return 1;
+	local VALUE=$(whiptail --title "Node Location" --radiolist "Please select where your node is physically hosted:\n\n- A datacenter is a professional environment, typically offering stable power and internet connectivity.\n\n- A residential location is your home or office, where your node runs locally.\n\n" 18 78 2 \
+		"datacenter" "Physically located in a professional datacenter" $datacenter_state \
+		"residential" "Physically located at home or in a personal office" $residential_state 3>&1 1>&2 2>&3) || return 1;
 	
 	# Check if the user cancelled the dialog
 	if [ -z "$VALUE" ]
