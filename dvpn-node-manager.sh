@@ -2251,8 +2251,9 @@ function menu_settings()
 		MESSAGE+="See more at: https://${NODE_IP}:${NODE_PORT}/status\n"
 		MESSAGE+="\nChoose a settings group to configure:"
 		
-		CHOICE=$(whiptail --title "Settings" --menu "${MESSAGE}" 21 60 5 \
+		CHOICE=$(whiptail --title "Settings" --menu "${MESSAGE}" 21 60 8 \
 			"1" "Moniker" \
+			"2" "Node Location" \
 			"2" "Network" \
 			"3" "VPN" \
 			"4" "Gigabyte Prices" \
@@ -2261,7 +2262,7 @@ function menu_settings()
 		
 		case $CHOICE in
 			1)
-				if ask_moniker && ask_node_location;
+				if ask_moniker;
 				then
 					refresh_config_files || return 1;
 					container_restart || return 1;
@@ -2270,6 +2271,15 @@ function menu_settings()
 				fi
 				;;
 			2)
+				if ask_node_location;
+				then
+					refresh_config_files || return 1;
+					container_restart || return 1;
+					# Display message indicating that the settings have been updated
+					whiptail --title "Settings Updated" --msgbox "Node settings have been updated." 8 78
+				fi
+				;;
+			3)
 				if ask_remote_ip && ask_node_port && ask_vpn_port
 				then
 					ask_firewall_configure "Do you want to apply automatic port changes to the firewall?" || return 1;
@@ -2280,7 +2290,7 @@ function menu_settings()
 					whiptail --title "Settings Updated" --msgbox "Network settings have been updated." 8 78
 				fi
 				;;
-			3)
+			4)
 				if ask_node_type && ask_max_peers
 				then
 					remove_vpn_config_files || return 1;
@@ -2292,10 +2302,10 @@ function menu_settings()
 					whiptail --title "Settings Updated" --msgbox "VPN settings have been updated." 8 78
 				fi
 				;;
-			4)
+			5)
 				message_gigabyte_prices
 				;;
-			5)
+			6)
 				message_hourly_prices
 				;;
 		esac
