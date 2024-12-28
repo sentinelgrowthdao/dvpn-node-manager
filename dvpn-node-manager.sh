@@ -1363,21 +1363,10 @@ function firewall_configure()
 		# Install UFW
 		output_info "Installing UFW, please wait..."
 		apt install -y ufw || { output_error "Failed to install UFW."; return 1; }
-		
-		# Find SSH Port
-		local SSH_PORT=$(sudo ss -plntu | grep sshd | awk '{print $5}' | sed -E 's/.*:(.*)/\1/' | uniq)
-		# If SSH port is empty
-		if [ -z "$SSH_PORT" ]
-		then
-			SSH_PORT=22
-		fi
-		# Allow SSH port
-		if ! ufw status | grep -q "${SSH_PORT}/tcp"
-		then
-			output_info "Allowing SSH port ${SSH_PORT} in UFW"
-			ufw allow ${SSH_PORT}/tcp > /dev/null 2>&1 || { output_error "Failed to allow SSH port."; return 1; }
-		fi
 	fi
+	
+	# Initialize SSH port
+	firewall_initialize_ssh || return 1;
 	
 	# If UFW is not enabled
 	if ! ufw status | grep -q "Status: active"
@@ -1441,6 +1430,48 @@ function firewall_configure()
 	ufw reload > /dev/null 2>&1 || { output_error "Failed to reload UFW."; return 1; }
 	
 	return 0;
+}
+
+# Function to find SSH port and ensure SSH process is running
+firewall_initialize_ssh()
+{
+	# Detect SSH port using ss, netstat, or /etc/ssh/sshd_config
+	local SSH_PORT
+	
+	if command -v ss > /dev/null 2>&1; then
+		SSH_PORT=$(ss -plntu 2>/dev/null | grep sshd | awk '{print $5}' | sed -E 's/.*:(.*)/\1/' | uniq)
+	fi
+	
+	if [ -z "$SSH_PORT" ] && command -v netstat > /dev/null 2>&1; then
+		SSH_PORT=$(netstat -plntu 2>/dev/null | grep sshd | awk '{print $4}' | sed -E 's/.*:(.*)/\1/' | uniq)
+	fi
+	
+	if [ -z "$SSH_PORT" ] && [ -f /etc/ssh/sshd_config ]; then
+		SSH_PORT=$(grep '^Port ' /etc/ssh/sshd_config | awk '{print $2}')
+	fi
+	
+	# Fallback to default port 22 if no port is detected
+	SSH_PORT=${SSH_PORT:-22}
+	
+	# Check if SSH process is running
+	if ! pgrep -x "sshd" > /dev/null; then
+		output_info "SSH process is not running. Skipping UFW rule for SSH."
+		return 0
+	fi
+	
+	# Allow SSH port in UFW if not already allowed
+	if ! ufw status | grep -q "${SSH_PORT}/tcp"
+	then
+		output_success "Allowing SSH port ${SSH_PORT} in UFW"
+		
+		if ! ufw allow ${SSH_PORT}/tcp > /dev/null 2>&1
+		then
+			output_error "Failed to allow SSH port in UFW."
+			return 1
+		fi
+	else
+		output_info "SSH port ${SSH_PORT} is already allowed in UFW."
+	fi
 }
 
 # Function to delete all firewall rules
