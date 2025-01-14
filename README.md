@@ -58,15 +58,19 @@ Debian users need to add the PPA manually. Follow these steps to add the PPA and
 
 1. Add the PPA key to your system:
 
-  ```
-  curl -fsSL https://files.foxinodes.net/launchpad/foxinou_dvpn-node-manager.gpg | sudo tee /etc/apt/trusted.gpg.d/foxinou_dvpn-node-manager.gpg > /dev/null
-  ```
+```bash
+curl -fsSL https://files.foxinodes.net/launchpad/foxinou_dvpn-node-manager.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/foxinou_dvpn-node-manager.gpg
+```
 
 2. Add the PPA to your sources list:
 
-  ```
-  echo "deb http://ppa.launchpad.net/foxinou/dvpn-node-manager/ubuntu jammy main" | sudo tee -a /etc/apt/sources.list
-  ```
+To add the PPA to your Debian 12 distribution, use the command below.
+
+```bash
+echo "deb http://ppa.launchpad.net/foxinou/dvpn-node-manager/ubuntu jammy main" | sudo tee /etc/apt/sources.list.d/foxinou_dvpn-node-manager.list
+```
+
+**Note:** If you are using Debian 11, you need to replace "jammy" with "focal".
 
 ### Install the `dvpn-node-manager`:
 
