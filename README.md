@@ -59,7 +59,7 @@ Debian users need to add the PPA manually. Follow these steps to add the PPA and
 1. Add the PPA key to your system:
 
 ```bash
-curl -fsSL https://files.foxinodes.net/launchpad/foxinou_dvpn-node-manager.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/foxinou_dvpn-node-manager.gpg
+curl -fsSL https://files.foxinodes.net/launchpad/foxinou_dvpn-node-manager.gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/foxinou_dvpn-node-manager.gpg
 ```
 
 2. Add the PPA to your sources list:
