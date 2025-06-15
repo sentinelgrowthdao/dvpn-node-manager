@@ -49,7 +49,7 @@ PUBLIC_ADDRESS=""
 NODE_ADDRESS=""
 WALLET_BALANCE=""
 WALLET_BALANCE_AMOUNT=0
-WALLET_BALANCE_DENOM="DVPN"
+WALLET_BALANCE_DENOM="P2P"
 WALLET_PASSPHRASE=""
 CERTIFICATE_DATE_CREATION=""
 CERTIFICATE_DATE_EXPIRATION=""
@@ -1324,9 +1324,8 @@ function wallet_balance()
 	done
 	
 	# Reset values
-	WALLET_BALANCE="0 DVPN"
+	WALLET_BALANCE="0 ${WALLET_BALANCE_DENOM}"
 	WALLET_BALANCE_AMOUNT=0
-	WALLET_BALANCE_DENOM="DVPN"
 	
 	# If the value is empty, return 1
 	if [ -z "$API_RESPONSE" ]
@@ -1938,10 +1937,10 @@ function message_wait_funds()
 	local BALANCE_CHECKED=$1
 	
 	# Define message based on balance checked
-	local MESSAGE="Please send at least 10 \$DVPN to the following address before continuing and starting the node:\n\n${PUBLIC_ADDRESS}\n\nPress 'Done' to check and continue or 'Quit' to exit."
+	local MESSAGE="Please send at least 10 \$${WALLET_BALANCE_DENOM} to the following address before continuing and starting the node:\n\n${PUBLIC_ADDRESS}\n\nPress 'Done' to check and continue or 'Quit' to exit."
 	if [ "$BALANCE_CHECKED" = true ]
 	then
-		MESSAGE="The address seems to have ${WALLET_BALANCE}. Please send at least 10 DVPN to the following address before continuing and starting the node:\n\n${PUBLIC_ADDRESS}\n\nPress 'Done' to check again or 'Quit' to exit."
+		MESSAGE="The address seems to have ${WALLET_BALANCE}. Please send at least 10 ${WALLET_BALANCE_DENOM} to the following address before continuing and starting the node:\n\n${PUBLIC_ADDRESS}\n\nPress 'Done' to check again or 'Quit' to exit."
 	fi
 	
 	# Display message to wait for funds and allow user to choose to quit or continue
@@ -2355,7 +2354,7 @@ function menu_wallet()
 	local WIDTH=78
 	local LABEL_PUBLIC_ADDRESS="Public Address:"
 	local LABEL_NODE_ADDRESS="Node Address:"
-	local LABEL_BALANCE="DVPN Balance:"
+	local LABEL_BALANCE="${WALLET_BALANCE_DENOM} Balance:"
 	
 	# Calculate space needed to right-align the addresses and balance
 	local PAD_PUBLIC=$(printf '%*s' $((WIDTH - ${#PUBLIC_ADDRESS} - ${#LABEL_PUBLIC_ADDRESS} - 5)) "")
