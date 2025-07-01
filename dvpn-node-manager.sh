@@ -34,7 +34,7 @@ HANDSHAKE_ENABLE=""
 # Fixed values loaded from api "dvpn-node/configuration" (except for BACKEND)
 BACKEND="test"
 CHAIN_ID="sentinelhub-2"
-RPC_ADDRESSES="https://rpc.sentinel.co:443,https://rpc.sentinel.quokkastake.io:443,https://rpc.trinityvalidator.com:443"
+RPC_ADDRESSES="https://rpc.sentineldao.com:443,https://rpc-sentinel.busurnode.com:443,https://sentinel-rpc.publicnode.com:443"
 GAS=200000
 GAS_ADJUSTMENT=1.05
 GAS_PRICE="0.1udvpn"
