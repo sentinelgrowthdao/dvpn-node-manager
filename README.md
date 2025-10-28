@@ -32,11 +32,13 @@ The script also depends on Docker images to run the dVPN node. These images are 
 The following Docker images are available for download:
 
 - **For general x86_64 architecture**:
-  - `ghcr.io/sentinel-official/dvpn-node:latest`
+  - `ghcr.io/sentinel-official/sentinel-dvpnx:latest`
 - **For ARMv7 architecture (commonly used in devices like Raspberry Pi)**:
   - `wajatmaka/sentinel-arm7-debian:v0.7.1`
+  > **Note:** This image is temporarily disabled until the corresponding version becomes available.
 - **For ARM64 architecture**:
   - `wajatmaka/sentinel-aarch64-alpine:v0.7.1`
+  > **Note:** This image is temporarily disabled until the corresponding version becomes available.
 
 # Installation
 
