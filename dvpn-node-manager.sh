@@ -10,18 +10,21 @@ USER_NAME=${SUDO_USER:-$(whoami)}
 USER_HOME=$(getent passwd ${USER_NAME} | cut -d: -f6)
 
 # Configuration file access paths
-CONFIG_DIR="${USER_HOME}/.sentinelnode"
+APP_DIR="${USER_HOME}/.sentinel-dvpnx"
+CONFIG_DIR="${APP_DIR}"
 CONFIG_FILE="${CONFIG_DIR}/config.toml"
-CONFIG_WIREGUARD="${CONFIG_DIR}/wireguard.toml"
+CONFIG_WIREGUARD="${CONFIG_DIR}/wireguard/config.toml"
 CONFIG_V2RAY="${CONFIG_DIR}/v2ray.toml"
 CONFIG_TLS_CRT="${CONFIG_DIR}/tls.crt"
 CONFIG_TLS_KEY="${CONFIG_DIR}/tls.key"
+DOCKER_VOLUME="${APP_DIR}:/root/.sentinel-dvpnx"
 
 # Configuration variables
-CONTAINER_NAME="sentinel-dvpn-node"
+CONTAINER_NAME="sentinel-dvpnx"
 NODE_MONIKER=""
 NODE_TYPE=""
 NODE_IP="0.0.0.0"
+NODE_IPV6=""
 NODE_COUNTRY="NA"
 NODE_PORT=
 NODE_LOCATION="datacenter"
@@ -37,11 +40,11 @@ CHAIN_ID="sentinelhub-2"
 RPC_ADDRESSES="https://rpc.sentineldao.com:443,https://rpc-sentinel.busurnode.com:443,https://sentinel-rpc.publicnode.com:443"
 GAS=200000
 GAS_ADJUSTMENT=1.05
-GAS_PRICE="0.1udvpn"
-DATACENTER_GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,9204ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1180852ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,122740ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,15342624udvpn"
-DATACENTER_HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,770ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1871892ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,18897ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,16000000udvpn"
-RESIDENTIAL_GIGABYTE_PRICES="52573ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,9204ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1180852ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,122740ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,15342624udvpn"
-RESIDENTIAL_HOURLY_PRICES="18480ibc/31FEE1A2A9F9C01113F90BD0BBCCE8FD6BBB8585FAF109A2101827DD1D5B95B8,770ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477,1871892ibc/B1C0DDB14F25279A2026BC8794E12B259F8BDA546A3C5132CCAEE4431CE36783,18897ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518,31500000udvpn"
+GAS_PRICES="0.2udvpn"
+DATACENTER_GIGABYTE_PRICES="udvpn:0.0025,12_500_000"
+DATACENTER_HOURLY_PRICES="udvpn:0.005,25_000_000"
+RESIDENTIAL_GIGABYTE_PRICES="udvpn:0.0025,12_500_000"
+RESIDENTIAL_HOURLY_PRICES="udvpn:0.005,25_000_000"
 
 # Dynamic values
 INSTALLATION_CHECKS_ENABLED=true
@@ -49,7 +52,9 @@ PUBLIC_ADDRESS=""
 NODE_ADDRESS=""
 WALLET_BALANCE=""
 WALLET_BALANCE_AMOUNT=0
-WALLET_BALANCE_DENOM="P2P"
+WALLET_BALANCE_DENOM="P2P"	
+
+PUBLISH_PORT_ARGS=""
 WALLET_PASSPHRASE=""
 CERTIFICATE_DATE_CREATION=""
 CERTIFICATE_DATE_EXPIRATION=""
@@ -92,26 +97,71 @@ function load_config_files()
 	output_info "Please wait while the configuration files are being loaded..."
 	
 	# Load config files into variables
-	NODE_MONIKER=$(grep "^moniker\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	NODE_TYPE=$(grep "^type\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	NODE_IP=$(grep "^remote_url\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F"/" '{print $3}' | awk -F":" '{print $1}')
-	NODE_PORT=$(grep "^listen_on\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"' | awk -F":" '{print $2}')
-	CHAIN_ID=$(grep "^id\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	MAX_PEERS=$(grep "^max_peers\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	# RPC_ADDRESSES=$(grep "^rpc_addresses\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	BACKEND=$(grep "^backend\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	WALLET_NAME=$(grep "^from\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	NODE_MONIKER=$(awk -F"=" '/^\[node\]/{flag=1;next} /^\[/{flag=0} flag && /^[[:space:]]*moniker[[:space:]]*=/{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); gsub(/"/,"",$2); print $2; exit}' "${CONFIG_FILE}")
+	NODE_TYPE=$(awk -F"=" '/^\[node\]/{flag=1;next} /^\[/{flag=0} flag && /^[[:space:]]*service_type[[:space:]]*=/{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); gsub(/"/,"",$2); print $2; exit}' "${CONFIG_FILE}")
+	
+	# Parse api_port and remote_addrs to get NODE_IP and NODE_PORT
+	local api_raw api_entry="" api_ip="" api_port="" remote_entry=""
+	api_raw=$(awk -F= '/^\[node\]/{flag=1;next} /^\[/{flag=0} flag && /api_port[[:space:]]*=/{print $2; exit}' "${CONFIG_FILE}" | xargs)
+	api_entry=$(echo "$api_raw" | sed -E 's/^\[?(.*?)(,.*)?\]?$/\1/' | tr -d '"')
+	
+	# Parse api_entry to extract IP and port
+	case "$api_entry" in
+		\[*\]:*) api_ip="${api_entry#\[}"; api_ip="${api_ip%%]*}"; api_port="${api_entry##*:}" ;;
+		\[*\])   api_ip="${api_entry#\[}"; api_ip="${api_ip%\]}" ;;
+		*:*[0-9]) api_ip="${api_entry%%:*}"; api_port="${api_entry##*:}" ;;
+		[0-9]*)  api_port="$api_entry" ;;
+		?*)      api_ip="$api_entry" ;;
+	esac
+	
+	# Fallback to remote_addrs if api_ip is empty
+	if [ -z "$api_ip" ]
+	then
+		remote_entry=$(awk -F= '/^\[node\]/{flag=1;next} /^\[/{flag=0} flag && /remote_addrs[[:space:]]*=/{print $2; exit}' "${CONFIG_FILE}" | xargs | sed -E 's/^\[?(.*?)(,.*)?\]?$/\1/' | tr -d '"')
+		remote_entry=${remote_entry#[}
+		remote_entry=${remote_entry%\]}
+	fi
+	
+	# Set NODE_PORT and NODE_IP
+	[ -n "$api_port" ] && NODE_PORT="$api_port"
+	if [ -n "$api_ip" ]; then
+		NODE_IP="$api_ip"
+	elif [ -n "$remote_entry" ]; then
+		NODE_IP="$remote_entry"
+	elif [ -z "$NODE_IP" ]; then
+		NODE_IP="0.0.0.0"
+	fi
+	
+	# Load chain_id from rpc section
+	CHAIN_ID=$(awk -F"=" '/^\[rpc\]/{flag=1;next} /^\[/{flag=0} flag && /^[[:space:]]*chain_id[[:space:]]*=/{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); gsub(/"/,"",$2); print $2; exit}' "${CONFIG_FILE}")
+
+	local rpc_line
+	rpc_line=$(awk -F"=" '/^\[rpc\]/{flag=1;next} /^\[/{flag=0} flag && /^[[:space:]]*addrs[[:space:]]*=/{print $0; exit}' "${CONFIG_FILE}")
+	if [ -n "$rpc_line" ]
+	then
+		local rpc_payload
+		rpc_payload=$(echo "$rpc_line" | sed -E 's/^[^[]*\[(.*)\].*/\1/' | tr -d ' "')
+		RPC_ADDRESSES=$rpc_payload
+	fi
+
+	MAX_PEERS=$(awk -F"=" '/^\[qos\]/{flag=1;next} /^\[/{flag=0} flag && /^[[:space:]]*max_peers[[:space:]]*=/{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); gsub(/"/,"",$2); print $2; exit}' "${CONFIG_FILE}")
+	if [ -z "$MAX_PEERS" ]; then
+		MAX_PEERS=250
+	fi
+
+	BACKEND=$(awk -F"=" '/^\[keyring\]/{flag=1;next} /^\[/{flag=0} flag && /^[[:space:]]*backend[[:space:]]*=/{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); gsub(/"/,"",$2); print $2; exit}' "${CONFIG_FILE}")
+	WALLET_NAME=$(awk -F"=" '/^\[tx\]/{flag=1;next} /^\[/{flag=0} flag && /^[[:space:]]*from_name[[:space:]]*=/{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); gsub(/"/,"",$2); print $2; exit}' "${CONFIG_FILE}")
 	
 	# Get handshake enable parameter (check if the section exists and if the parameter exists in the section)
 	HANDSHAKE_ENABLE=$(awk '
-	BEGIN {FS="="; section_found=0}
-	/^\[handshake\]/ {section_found=1; next}
-	/^\[.*\]/ && !/^\[handshake\]/ {section_found=0}
-	section_found && /enable/ {
-		gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2);  # Nettoie les espaces avant et après la valeur
-		print $2;  # Affiche uniquement la valeur
-		exit;
-	}' $CONFIG_FILE)
+BEGIN {FS="="; section_found=0}
+/^\[handshake_dns\]/ {section_found=1; next}
+/^\[.*\]/ && !/^\[handshake_dns\]/ {section_found=0}
+section_found && /enable/ {
+	gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2);
+	print $2;  # Affiche uniquement la valeur
+	exit;
+}' $CONFIG_FILE)
 	
 	# Find out if the node is residential or datacenter
 	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
@@ -166,11 +216,21 @@ function load_vpn_config()
 # Function to load wireguard configuration
 function load_wireguard_config()
 {
+	WIREGUARD_PORT=""
 	# If wireguard config exists
 	if [ -f "${CONFIG_WIREGUARD}" ]
 	then
-		# Load from WireGuard configuration
-		WIREGUARD_PORT=$(grep "^listen_port\s*=" "${CONFIG_WIREGUARD}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+		# Load from WireGuard configuration (supports port mappings like "51820:51820")
+		local raw_port=$(awk -F"=" '/^port[[:space:]]*=/{gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); gsub(/"/,"",$2); print $2}' "${CONFIG_WIREGUARD}" | tail -n1)
+		if [ -n "$raw_port" ]
+		then
+			if [[ "$raw_port" =~ ^[0-9]+:[0-9]+$ ]]
+			then
+				WIREGUARD_PORT="${raw_port##*:}"
+			else
+				WIREGUARD_PORT="$raw_port"
+			fi
+		fi
 	fi
 	
 	return 0;
@@ -179,6 +239,7 @@ function load_wireguard_config()
 # Function to load v2ray configuration
 function load_v2ray_config()
 {
+	V2RAY_PORT=""
 	# If v2ray config exists
 	if [ -f "${CONFIG_V2RAY}" ]
 	then
@@ -198,59 +259,94 @@ function refresh_config_files()
 	sed -i "s/moniker = .*/moniker = \"${NODE_MONIKER}\"/g" ${CONFIG_FILE} || { output_error "Failed to set moniker."; return 1; }
 	
 	# Update chain_id parameter
-	sed -i "s/id = .*/id = \"${CHAIN_ID}\"/g" ${CONFIG_FILE} || { output_error "Failed to set chain ID."; return 1; }
+	sed -i "s/^[[:space:]]*chain_id[[:space:]]*=.*/chain_id = \"${CHAIN_ID}\"/g" ${CONFIG_FILE} || { output_error "Failed to set chain ID."; return 1; }
 	
-	# Update rpc_addresses parameter
-	sed -i "s/rpc_addresses = .*/rpc_addresses = \"${RPC_ADDRESSES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set remote RPC."; return 1; }
+	# Update RPC addresses parameter
+	local formatted_rpc="[]"
+	if [ -n "${RPC_ADDRESSES}" ]
+	then
+		IFS=',' read -r -a rpc_split <<< "${RPC_ADDRESSES}"
+		local rpc_list=""
+		for url in "${rpc_split[@]}"
+		do
+			url=$(echo "$url" | xargs)
+			if [ -z "$url" ]; then
+				continue
+			fi
+			if [ -n "$rpc_list" ]; then
+				rpc_list+=", "
+			fi
+			rpc_list+="\"${url}\""
+		done
+		if [ -n "$rpc_list" ]; then
+			formatted_rpc="[${rpc_list}]"
+		fi
+	fi
+	sed -i "s|^[[:space:]]*addrs[[:space:]]*=.*|addrs = ${formatted_rpc}|g" ${CONFIG_FILE} || { output_error "Failed to set RPC addresses."; return 1; }
 	
 	# Update node type parameter
-	sed -i "s/type = .*/type = \"${NODE_TYPE}\"/g" ${CONFIG_FILE} || { output_error "Failed to set node type."; return 1; }
+	sed -i "s/^[[:space:]]*service_type[[:space:]]*=.*/service_type = \"${NODE_TYPE}\"/g" ${CONFIG_FILE} || { output_error "Failed to set node type."; return 1; }
 	
-	# Update remote_url parameter
-	sed -i "s/listen_on = .*/listen_on = \"0\\.0\\.0\\.0:${NODE_PORT}\"/g" ${CONFIG_FILE} || { output_error "Failed to set remote URL."; return 1; }
+	# Update API port
+	sed -i "s/^[[:space:]]*api_port[[:space:]]*=.*/api_port = \"${NODE_PORT}\"/g" ${CONFIG_FILE} || { output_error "Failed to set node API port."; return 1; }
 	
-	# Update remote_url parameter
-	sed -i "s/remote_url = .*/remote_url = \"https:\/\/${NODE_IP}:${NODE_PORT}\"/g" ${CONFIG_FILE} || { output_error "Failed to set remote URL."; return 1; }
-	
+	# Update remote addresses
+	local remote_values=()
+	for candidate in "${NODE_IP}" "${NODE_IPV6}"
+	do
+		[ -z "$candidate" ] && continue
+		[ "$candidate" = "0.0.0.0" ] && continue
+		if [[ " ${remote_values[*]} " != *" ${candidate} "* ]]; then
+			remote_values+=("$candidate")
+		fi
+	done
+	[ ${#remote_values[@]} -eq 0 ] && remote_values=("127.0.0.1")
+
+	local remote_list="["
+	remote_list+=$(printf '"%s", ' "${remote_values[@]}")
+	remote_list=${remote_list%, }
+	remote_list+="]"
+	sed -i "s|^[[:space:]]*remote_addrs[[:space:]]*=.*|remote_addrs = ${remote_list}|" ${CONFIG_FILE} || { output_error "Failed to set remote addresses."; return 1; }
+
 	# Update backend parameter
-	sed -i "s/backend = .*/backend = \"${BACKEND}\"/g" ${CONFIG_FILE} || { output_error "Failed to set backend."; return 1; }
-	
+	sed -i "s/^[[:space:]]*backend[[:space:]]*=.*/backend = \"${BACKEND}\"/" ${CONFIG_FILE} || { output_error "Failed to set backend."; return 1; }
+
 	# Update handshake enable parameter
-	sed -i '/^\[handshake\]$/,/^\[/!b; /^\[handshake\]$/,/^\[/ {/^[[:space:]]*enable[[:space:]]*=/s/=.*/= '"${HANDSHAKE_ENABLE}"'/; /^[[:space:]]*\[/b}' "${CONFIG_FILE}"
+	sed -i '/^\[handshake_dns\]$/,/^\[/!b; /^\[handshake_dns\]$/,/^\[/ {/^[[:space:]]*enable[[:space:]]*=/s/=.*/= '"${HANDSHAKE_ENABLE}"'/; /^[[:space:]]*\[/b}' "${CONFIG_FILE}"
 
 	# Update max_peers parameter
-	sed -i "s/max_peers = .*/max_peers = ${MAX_PEERS}/g" ${CONFIG_FILE} || { output_error "Failed to set max peers."; return 1; }
-	
+	sed -i "s/^[[:space:]]*max_peers[[:space:]]*=.*/max_peers = ${MAX_PEERS}/" ${CONFIG_FILE} || { output_error "Failed to set max peers."; return 1; }
+
 	# Update Gas parameters
-	sed -i "s/gas = .*/gas = ${GAS}/g" ${CONFIG_FILE} || { output_error "Failed to set gas."; return 1; }
-	
+	sed -i "s/^[[:space:]]*gas[[:space:]]*=.*/gas = ${GAS}/" ${CONFIG_FILE} || { output_error "Failed to set gas."; return 1; }
+
 	# Update Gas adjustment parameters
-	sed -i "s/gas_adjustment = .*/gas_adjustment = ${GAS_ADJUSTMENT}/g" ${CONFIG_FILE} || { output_error "Failed to set gas adjustment."; return 1; }
-	
+	sed -i "s/^[[:space:]]*gas_adjustment[[:space:]]*=.*/gas_adjustment = ${GAS_ADJUSTMENT}/" ${CONFIG_FILE} || { output_error "Failed to set gas adjustment."; return 1; }
+
 	# Update Gas price parameters
-	sed -i "s/gas_price = .*/gas_price = \"${GAS_PRICE}\"/g" ${CONFIG_FILE} || { output_error "Failed to set gas price."; return 1; }
+	sed -i "s/^[[:space:]]*gas_prices[[:space:]]*=.*/gas_prices = \"${GAS_PRICES}\"/" ${CONFIG_FILE} || { output_error "Failed to set gas price."; return 1; }
 	
 	# Update prices parameters
 	if [ "$NODE_LOCATION" == "residential" ]
 	then
 		# Update gigabyte_prices parameter
-		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${RESIDENTIAL_GIGABYTE_PRICES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set gigabyte prices."; return 1; }
+		sed -i "s/^[[:space:]]*gigabyte_prices[[:space:]]*=.*/gigabyte_prices = \"${RESIDENTIAL_GIGABYTE_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set gigabyte prices."; return 1; }
 		
 		# Update hourly_prices parameter
-		sed -i "s/hourly_prices = .*/hourly_prices = \"${RESIDENTIAL_HOURLY_PRICES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
+		sed -i "s/^[[:space:]]*hourly_prices[[:space:]]*=.*/hourly_prices = \"${RESIDENTIAL_HOURLY_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
 	else
 		# Update gigabyte_prices parameter
-		sed -i "s/gigabyte_prices = .*/gigabyte_prices = \"${DATACENTER_GIGABYTE_PRICES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set gigabyte prices."; return 1; }
+		sed -i "s/^[[:space:]]*gigabyte_prices[[:space:]]*=.*/gigabyte_prices = \"${DATACENTER_GIGABYTE_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set gigabyte prices."; return 1; }
 		
 		# Update hourly_prices parameter
-		sed -i "s/hourly_prices = .*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/g" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
+		sed -i "s/^[[:space:]]*hourly_prices[[:space:]]*=.*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
 	fi
 	
 	# Update vpn configuration
 	if [ "$NODE_TYPE" == "wireguard" ]
 	then
 		# Update WireGuard port
-		sed -i "s/listen_port = .*/listen_port = ${WIREGUARD_PORT}/g" ${CONFIG_WIREGUARD} || { output_error "Failed to set WireGuard port."; return 1; }
+		sed -i "s/^[[:space:]]*port[[:space:]]*=.*/port = \"${WIREGUARD_PORT}\"/g" ${CONFIG_WIREGUARD} || { output_error "Failed to set WireGuard port."; return 1; }
 	elif [ "$NODE_TYPE" == "v2ray" ]
 	then
 		# Update V2Ray port
@@ -281,7 +377,7 @@ function load_network_configuration()
 	RPC_ADDRESSES=$(echo "$CONFIG" | jq -r '.rpc_addresses')
 	GAS=$(echo "$CONFIG" | jq -r '.gas')
 	GAS_ADJUSTMENT=$(echo "$CONFIG" | jq -r '.gas_adjustment')
-	GAS_PRICE=$(echo "$CONFIG" | jq -r '.gas_price')
+	GAS_PRICES=$(echo "$CONFIG" | jq -r '.gas_prices')
 	DATACENTER_GIGABYTE_PRICES=$(echo "$CONFIG" | jq -r '.datacenter.gigabyte_prices')
 	DATACENTER_HOURLY_PRICES=$(echo "$CONFIG" | jq -r '.datacenter.hourly_prices')
 	RESIDENTIAL_GIGABYTE_PRICES=$(echo "$CONFIG" | jq -r '.residential.gigabyte_prices')
@@ -298,10 +394,28 @@ function generate_node_config()
 	then
 		# Show waiting message
 		output_info "Please wait while the dVPN node configuration is being generated..."
+		# Build remote address flags
+		local remote_flags=()
+		# Prefer explicit overrides, fallback to detected node IP
+		if [ -n "${NODE_IP}" ] && [ "${NODE_IP}" != "0.0.0.0" ]; then
+			remote_flags+=("--node.remote-addrs" "${NODE_IP}")
+		fi
+		if [ -n "${NODE_IPV6}" ] && [ "${NODE_IPV6}" != "::1" ]; then
+			remote_flags+=("--node.remote-addrs" "${NODE_IPV6}")
+		fi
 		# Generate Sentinel config
 		docker run --rm \
-			--volume ${CONFIG_DIR}:/root/.sentinelnode \
-			${CONTAINER_NAME} process config init || { output_error "Failed to generate Sentinel configuration."; return 1; }
+			--volume "${DOCKER_VOLUME}" \
+			${CONTAINER_NAME} init \
+			--keyring.backend "test" \
+			--node.interval-session-usage-sync-with-blockchain "540s" \
+			--node.interval-session-validate "60s" \
+			--node.interval-status-update "240s" \
+			--node.service-type "wireguard" \
+			--rpc.addrs "https://rpc-bluenet.sentinel.co:443" \
+			--rpc.chain-id "bluenet-2-2" \
+			--tx.from-name "${WALLET_NAME}" \
+			"${remote_flags[@]}" || { output_error "Failed to generate Sentinel configuration."; return 1; }
 		output_success "The dVPN node configuration has been generated."
 	fi
 	
@@ -317,14 +431,7 @@ function generate_vpn_config()
 		# If wireguard config not generated
 		if [ ! -f "${CONFIG_WIREGUARD}" ]
 		then
-			# Show waiting message
-			output_info "Please wait while the WireGuard configuration is being generated..."
-			# Generate WireGuard config
-			docker run --rm \
-				--volume ${CONFIG_DIR}:/root/.sentinelnode \
-				${CONTAINER_NAME} process wireguard config init || { output_error "Failed to generate WireGuard configuration."; return 1; }
-			
-			output_success "WireGuard configuration has been generated."
+			output_info "WireGuard configuration is handled by sentinel-dvpnx init; skipping legacy generation."
 		fi
 	# If node type is v2ray
 	elif [ "$NODE_TYPE" == "v2ray" ]
@@ -332,14 +439,7 @@ function generate_vpn_config()
 		# If v2ray config not generated
 		if [ ! -f "${CONFIG_V2RAY}" ]
 		then
-			# Show waiting message
-			output_info "Please wait while the V2Ray configuration is being generated..."
-			# Generate V2Ray config
-			docker run --rm \
-				--volume ${CONFIG_DIR}:/root/.sentinelnode \
-				${CONTAINER_NAME} process v2ray config init || { output_error "Failed to generate V2Ray configuration."; return 1; }
-			
-			output_success "V2Ray configuration has been generated."
+			output_info "V2Ray configuration is handled by sentinel-dvpnx init; skipping legacy generation."
 		fi
 	else
 		output_error "Invalid node type."
@@ -681,42 +781,78 @@ function network_remote_addr()
 {
 	# Show waiting message
 	output_info "Please wait while the public IP is being retrieved..."
-	# Retrieve the current public IP using wget and sed
-	local VALUE=$(curl -s $FOXINODES_API_CHECK_IP || echo "")
 	
-	# Reset values
 	NODE_IP="0.0.0.0"
 	NODE_COUNTRY="NA"
 	
-	# If VALUE is empty, try with fallback
-	if [ -z "$VALUE" ]
+	# Primary lookup using ifconfig.co (supports IPv4 & IPv6)
+	if command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1
 	then
-		# Fallback to checkip.dyndns.org
-		VALUE=$(wget -q -O - checkip.dyndns.org | sed -e 's/.*Current IP Address: //' -e 's/<.*$//')
-		# If IP is not empty
-		if [ ! -z "$VALUE" ]
+		local ipv4_response=$(curl -s -4 https://ifconfig.co/json || echo "")
+		if echo "$ipv4_response" | jq -e . >/dev/null 2>&1
 		then
-			# Set the IP address
-			NODE_IP=$VALUE
+			local ipv4=$(echo "$ipv4_response" | jq -r '.ip // empty')
+			local country=$(echo "$ipv4_response" | jq -r '.country_iso // empty')
+			if [ -n "$ipv4" ]; then
+				NODE_IP="$ipv4"
+			fi
+			if [ -n "$country" ]; then
+				NODE_COUNTRY="$country"
+			fi
 		fi
-	else
-		# Parse the JSON response to extract the values
-		NODE_IP=$(echo "$VALUE" | jq -r '.ip')
-		NODE_COUNTRY=$(echo "$VALUE" | jq -r '.iso_code')
+
+		local ipv6_response=$(curl -s -6 https://ifconfig.co/json || echo "")
+		if echo "$ipv6_response" | jq -e . >/dev/null 2>&1
+		then
+			local ipv6=$(echo "$ipv6_response" | jq -r '.ip // empty')
+			local country6=$(echo "$ipv6_response" | jq -r '.country_iso // empty')
+			if [ -n "$ipv6" ]; then
+				NODE_IPV6="$ipv6"
+			fi
+			if [ "$NODE_COUNTRY" = "NA" ] && [ -n "$country6" ]; then
+				NODE_COUNTRY="$country6"
+			fi
+		fi
+	fi
+
+	# Fallback to Foxinodes API for IPv4 and country when needed
+	if [ -z "$NODE_IP" ] || [ -z "$NODE_IPV6" ] || [ "$NODE_COUNTRY" = "NA" ]
+	then
+		local fox_response=$(curl -s $FOXINODES_API_CHECK_IP || echo "")
+		if echo "$fox_response" | jq -e . >/dev/null 2>&1
+		then
+			local fox_ipv4=$(echo "$fox_response" | jq -r '.ip // empty')
+			local fox_ipv6=$(echo "$fox_response" | jq -r '.ip6 // empty')
+			local fox_country=$(echo "$fox_response" | jq -r '.iso_code // empty')
+			if [ -n "$fox_ipv4" ] && [ -z "$NODE_IP" ]; then
+				NODE_IP="$fox_ipv4"
+			fi
+			if [ -n "$fox_ipv6" ] && [ -z "$NODE_IPV6" ]; then
+				NODE_IPV6="$fox_ipv6"
+			fi
+			if [ "$NODE_COUNTRY" = "NA" ] && [ -n "$fox_country" ]; then
+				NODE_COUNTRY="$fox_country"
+			fi
+		fi
 	fi
 	
+	if [ -z "$NODE_COUNTRY" ]; then
+		NODE_COUNTRY="NA"
+	fi
+
 	return 0;
 }
 
 # Function to check if the port is open
 function network_check_port()
 {
-	# If node address is empty, return error
-	if [ -z "$NODE_ADDRESS" ]
-	then
-		output_error "Node address is empty, please check your wallet configuration before proceeding."
-		return 1
-	fi
+	# TODO: Verify node address
+	# # If node address is empty, return error
+	# if [ -z "$NODE_ADDRESS" ]
+	# then
+	# 	output_error "Node address is empty, please check your wallet configuration before proceeding."
+	# 	return 1
+	# fi
 	
 	local MESSAGE=""
 	local RESPONSE=""
@@ -757,10 +893,11 @@ function network_check_port()
 			else
 				MESSAGE="An unknown error occurred while checking the port."
 			fi
-		# Check if the node address is the same as the one we are checking
-		elif [ "$RQ_NODE_ADDRESS" != "$NODE_ADDRESS" ]
-		then
-			MESSAGE="Node address '$RQ_NODE_ADDRESS' is different from the one we are checking '$NODE_ADDRESS'"
+		# TODO: Verify node address
+		# # Check if the node address is the same as the one we are checking
+		# elif [ "$RQ_NODE_ADDRESS" != "$NODE_ADDRESS" ]
+		# then
+		# 	MESSAGE="Node address '$RQ_NODE_ADDRESS' is different from the one we are checking '$NODE_ADDRESS'"
 		fi
 		
 		# If MESSAGE is empty, it means port is open and there are no errors
@@ -868,17 +1005,21 @@ function container_install()
 	then
 		if [[ $(arch) == "arm"* ]]
 		then
-			IMAGE="wajatmaka/sentinel-arm7-debian:v0.7.1"
+			# IMAGE="wajatmaka/sentinel-arm7-debian:v0.7.1"
+			output_error "Unsupported architecture. Please wait for ARMv7 support."
+			return 1;
 		elif [[ $(arch) == "aarch64"* ]] || [[ $(arch) == "arm64"* ]]
 		then
-			IMAGE="wajatmaka/sentinel-aarch64-alpine:v0.7.1"
+			# IMAGE="wajatmaka/sentinel-aarch64-alpine:v0.7.1"
+			output_error "Unsupported architecture. Please wait for ARM64 support."
+			return 1
 		else
 			output_error "Unsupported architecture. Please use ARMv7 or ARM64."
 			return 1
 		fi
 	elif os_ubuntu || os_debian
 	then
-		IMAGE="ghcr.io/sentinel-official/dvpn-node:latest"
+		IMAGE="ghcr.io/sentinel-official/sentinel-dvpnx:latest"
 	else
 		output_error "Unsupported OS. Please use Ubuntu, Debian, or Raspbian."
 		return 1
@@ -929,47 +1070,69 @@ function container_start()
 		if [ "$BACKEND" == "file" ]
 		then
 			# Start WireGuard node
-			nohup bash -c "echo '${WALLET_PASSPHRASE}' | docker run \
-				--interactive \
-				--name ${CONTAINER_NAME} \
-				--sig-proxy=false \
-				--detach-keys="ctrl-q" \
-				--volume ${CONFIG_DIR}:/root/.sentinelnode \
-				--volume /lib/modules:/lib/modules \
-				--cap-drop ALL \
-				--cap-add NET_ADMIN \
-				--cap-add NET_BIND_SERVICE \
-				--cap-add NET_RAW \
-				--cap-add SYS_MODULE \
-				--sysctl net.ipv4.ip_forward=1 \
-				--sysctl net.ipv6.conf.all.disable_ipv6=0 \
-				--sysctl net.ipv6.conf.all.forwarding=1 \
-				--sysctl net.ipv6.conf.default.forwarding=1 \
-				--publish ${NODE_PORT}:${NODE_PORT}/tcp \
-				--publish ${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp \
-				${CONTAINER_NAME} process start" > /dev/null 2>&1 &
+			local -a docker_run_passphrase_args=(
+				"docker" "run"
+				"--interactive"
+				"--name" "${CONTAINER_NAME}"
+				"--sig-proxy=false"
+				"--detach-keys=ctrl-q"
+				"--volume" "${DOCKER_VOLUME}"
+				"--volume" "/lib/modules:/lib/modules"
+				"--cap-drop" "ALL"
+				"--cap-add" "NET_ADMIN"
+				"--cap-add" "NET_BIND_SERVICE"
+				"--cap-add" "NET_RAW"
+				"--cap-add" "SYS_MODULE"
+				"--sysctl" "net.ipv4.ip_forward=1"
+				"--sysctl" "net.ipv6.conf.all.disable_ipv6=0"
+				"--sysctl" "net.ipv6.conf.all.forwarding=1"
+				"--sysctl" "net.ipv6.conf.default.forwarding=1"
+				"--publish" "${NODE_PORT}:${NODE_PORT}/tcp"
+				"--publish" "${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp"
+			)
+			# Append publish args
+			docker_run_passphrase_args+=("${publish_args_array[@]}")
+			docker_run_passphrase_args+=("${CONTAINER_NAME}" "start")
+			
+			# Build the command string
+			local docker_run_passphrase_cmd
+			docker_run_passphrase_cmd=$(printf '%q ' "${docker_run_passphrase_args[@]}")
+			
+			# Launch the command in the background with nohup
+			nohup bash -c "echo '${WALLET_PASSPHRASE}' | ${docker_run_passphrase_cmd}" > /dev/null 2>&1 &
 			disown
 			# Wait for 5 seconds
 			sleep 5
 		else
 			# Start WireGuard node
-			docker run -d \
-				--name ${CONTAINER_NAME} \
-				--restart unless-stopped \
-				--volume ${CONFIG_DIR}:/root/.sentinelnode \
-				--volume /lib/modules:/lib/modules \
-				--cap-drop ALL \
-				--cap-add NET_ADMIN \
-				--cap-add NET_BIND_SERVICE \
-				--cap-add NET_RAW \
-				--cap-add SYS_MODULE \
-				--sysctl net.ipv4.ip_forward=1 \
-				--sysctl net.ipv6.conf.all.disable_ipv6=0 \
-				--sysctl net.ipv6.conf.all.forwarding=1 \
-				--sysctl net.ipv6.conf.default.forwarding=1 \
-				--publish ${NODE_PORT}:${NODE_PORT}/tcp \
-				--publish ${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp \
-				${CONTAINER_NAME} process start > /dev/null 2>&1 || { output_error "Failed to start WireGuard node."; return 1; }
+			local -a docker_run_args=(
+				"docker" "run" "-d"
+				"--name" "${CONTAINER_NAME}"
+				"--restart" "unless-stopped"
+				"--volume" "${DOCKER_VOLUME}"
+				"--volume" "/lib/modules:/lib/modules"
+				"--cap-drop" "ALL"
+				"--cap-add" "NET_ADMIN"
+				"--cap-add" "NET_BIND_SERVICE"
+				"--cap-add" "NET_RAW"
+				"--cap-add" "SYS_MODULE"
+				"--sysctl" "net.ipv4.ip_forward=1"
+				"--sysctl" "net.ipv6.conf.all.disable_ipv6=0"
+				"--sysctl" "net.ipv6.conf.all.forwarding=1"
+				"--sysctl" "net.ipv6.conf.default.forwarding=1"
+				"--publish" "${NODE_PORT}:${NODE_PORT}/tcp"
+				"--publish" "${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp"
+			)
+			# Append publish args
+			docker_run_args+=("${publish_args_array[@]}")
+			docker_run_args+=("${CONTAINER_NAME}" "start")
+
+			# Execute the docker run command
+			if ! "${docker_run_args[@]}" > /dev/null 2>&1
+			then
+				output_error "Failed to start WireGuard node."
+				return 1
+			fi
 		fi
 	elif [ "$NODE_TYPE" == "v2ray" ]
 	then
@@ -977,27 +1140,48 @@ function container_start()
 		if [ "$BACKEND" == "file" ]
 		then
 			# Start V2Ray node
-			nohup bash -c "echo '${WALLET_PASSPHRASE}' | docker run \
-				--interactive \
-				--name ${CONTAINER_NAME} \
-				--sig-proxy=false \
-				--detach-keys="ctrl-q" \
-				--volume "${CONFIG_DIR}:/root/.sentinelnode" \
-				--publish ${NODE_PORT}:${NODE_PORT}/tcp \
-				--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
-				${CONTAINER_NAME} process start" > /dev/null 2>&1 &
+			local -a docker_run_passphrase_args=(
+				"docker" "run"
+				"--interactive"
+				"--name" "${CONTAINER_NAME}"
+				"--sig-proxy=false"
+				"--detach-keys=ctrl-q"
+				"--volume" "${DOCKER_VOLUME}"
+				"--publish" "${NODE_PORT}:${NODE_PORT}/tcp"
+				"--publish" "${V2RAY_PORT}:${V2RAY_PORT}/tcp"
+			)
+			# Append publish args
+			docker_run_passphrase_args+=("${publish_args_array[@]}")
+			docker_run_passphrase_args+=("${CONTAINER_NAME}" "start")
+			
+			# Build the command string
+			local docker_run_passphrase_cmd
+			docker_run_passphrase_cmd=$(printf '%q ' "${docker_run_passphrase_args[@]}")
+			
+			# Launch the command in the background with nohup
+			nohup bash -c "echo '${WALLET_PASSPHRASE}' | ${docker_run_passphrase_cmd}" > /dev/null 2>&1 &
 			disown
 			# Wait for 5 seconds
 			sleep 5
 		else
 			# Start V2Ray node
-			docker run -d \
-				--name ${CONTAINER_NAME} \
-				--restart unless-stopped \
-				--volume "${CONFIG_DIR}:/root/.sentinelnode" \
-				--publish ${NODE_PORT}:${NODE_PORT}/tcp \
-				--publish ${V2RAY_PORT}:${V2RAY_PORT}/tcp \
-				${CONTAINER_NAME} process start > /dev/null 2>&1 || { output_error "Failed to start V2Ray node."; return 1; }
+			local -a docker_run_args=(
+				"docker" "run" "-d"
+				"--name" "${CONTAINER_NAME}"
+				"--restart" "unless-stopped"
+				"--volume" "${DOCKER_VOLUME}"
+				"--publish" "${NODE_PORT}:${NODE_PORT}/tcp"
+				"--publish" "${V2RAY_PORT}:${V2RAY_PORT}/tcp"
+			)
+			# Append publish args
+			docker_run_args+=("${publish_args_array[@]}")
+			docker_run_args+=("${CONTAINER_NAME}" "start")
+			# Execute the docker run command
+			if ! "${docker_run_args[@]}" > /dev/null 2>&1
+			then
+				output_error "Failed to start V2Ray node."
+				return 1
+			fi
 		fi
 	else
 		output_error "Invalid node type."
@@ -1081,7 +1265,7 @@ function container_logs()
 function wallet_initialization()
 {
 	# Check if wallet exists
-	if docker run --rm --interactive --tty --volume ${CONFIG_DIR}:/root/.sentinelnode ${CONTAINER_NAME} process keys list | grep -q "sentnode"
+	if docker run --rm --interactive --tty --volume "${DOCKER_VOLUME}" ${CONTAINER_NAME} keys list --keyring.backend "${BACKEND}" | grep -qw "${WALLET_NAME}"
 	then
 		# Ask user if they want to delete the existing wallet
 		if whiptail --title "Wallet Exists" --yesno "A wallet already exists. Do you want to delete the existing wallet and continue?" 8 78
@@ -1122,15 +1306,20 @@ function wallet_initialization()
 		# If passphrase is required
 		if [ "$BACKEND" == "file" ]
 		then
-			echo -e "${MNEMONIC}\n${WALLET_PASSPHRASE}\n${WALLET_PASSPHRASE}" | docker run --rm \
-				--interactive \
-				--volume ${CONFIG_DIR}:/root/.sentinelnode \
-				${CONTAINER_NAME} process keys add --recover > /dev/null 2>&1 || { output_error "Failed to restore wallet."; return 1; }
+			OUTPUT=$(expect -c "
+				set timeout -1
+				spawn docker run --rm -it --volume \"${DOCKER_VOLUME}\" ${CONTAINER_NAME} keys add --keyring.backend \"${BACKEND}\" \"${WALLET_NAME}\"
+				expect \"Enter your BIP-39 mnemonic\";            send -- \"${MNEMONIC}\n\"
+				expect \"Enter your BIP-39 passphrase\";           send -- \"\n\"
+				expect -re \"Enter keyring passphrase\";           send -- \"${WALLET_PASSPHRASE}\n\"
+				expect \"Re-enter keyring passphrase\";            send -- \"${WALLET_PASSPHRASE}\n\"
+				expect eof
+			" 2>&1) || { echo "Error: $OUTPUT"; output_error "Failed to restore wallet."; return 1; }
 		else
-			echo "$MNEMONIC" | docker run --rm \
+			OUTPUT=$(echo -e "$MNEMONIC\n\n" | docker run --rm \
 				--interactive \
-				--volume ${CONFIG_DIR}:/root/.sentinelnode \
-				${CONTAINER_NAME} process keys add --recover > /dev/null 2>&1 || { output_error "Failed to restore wallet."; return 1; }
+				--volume "${DOCKER_VOLUME}" \
+				${CONTAINER_NAME} keys add --keyring.backend "${BACKEND}" "${WALLET_NAME}" 2>&1) || { echo "Error: $OUTPUT"; output_error "Failed to restore wallet."; return 1; }
 		fi
 		output_success "Wallet restored successfully."
 	else
@@ -1140,22 +1329,26 @@ function wallet_initialization()
 		# If passphrase is required
 		if [ "$BACKEND" == "file" ]
 		then
-			OUTPUT=$( (echo "${WALLET_PASSPHRASE}"; echo "${WALLET_PASSPHRASE}") | docker run --rm \
-						--interactive \
-						--volume ${CONFIG_DIR}:/root/.sentinelnode \
-						${CONTAINER_NAME} process keys add 2>&1 )
+			OUTPUT=$(expect -c "
+				set timeout -1
+				spawn docker run --rm -it --volume \"${DOCKER_VOLUME}\" ${CONTAINER_NAME} keys add --keyring.backend \"${BACKEND}\" \"${WALLET_NAME}\"
+				expect \"Enter your BIP-39 mnemonic\";            send -- \"\n\"
+				expect \"Enter your BIP-39 passphrase\";           send -- \"\n\"
+				expect -re \"Enter keyring passphrase\";           send -- \"${WALLET_PASSPHRASE}\n\"
+				expect \"Re-enter keyring passphrase\";            send -- \"${WALLET_PASSPHRASE}\n\"
+				expect eof
+			" 2>&1) || { echo "Error: $OUTPUT"; output_error "Failed to restore wallet."; return 1; }
 		else
-			OUTPUT=$(docker run --rm \
+			OUTPUT=$(echo -e "\n" | docker run --rm \
 						--interactive \
-						--tty \
-						--volume ${CONFIG_DIR}:/root/.sentinelnode \
-						${CONTAINER_NAME} process keys add)
+						--volume "${DOCKER_VOLUME}" \
+						${CONTAINER_NAME} keys add --keyring.backend "${BACKEND}" "${WALLET_NAME}")
 		fi
 		
-		# If the ouput contains "Important" then extract the mnemonic
-		if echo "$OUTPUT" | grep -q "Important"
+		# If the output contains "mnemonic:" then extract the mnemonic
+		if echo "$OUTPUT" | grep -q "mnemonic:"
 		then
-			MNEMONIC=$(echo "$OUTPUT" | awk '/Important/{flag=1; next} /Name/{flag=0} flag' | sed 's/[ \t\n]*$//')
+			MNEMONIC=$(echo "$OUTPUT" | grep "mnemonic:" | cut -d: -f2- | xargs)
 		else
 			output_error "Failed to get mnemonic: $OUTPUT"
 			return 1
@@ -1210,8 +1403,8 @@ function wallet_exist()
 	then
 		wallet_list_output=$(echo "${WALLET_PASSPHRASE}" | docker run --rm \
 			--interactive \
-			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
-			"${CONTAINER_NAME}" process keys list 2>&1)
+			--volume "${DOCKER_VOLUME}" \
+			"${CONTAINER_NAME}" keys list --keyring.backend "${BACKEND}" 2>&1)
 		
 		# Check for known error messages
 		if echo "$wallet_list_output" | grep -qi "too many failed passphrase attempts"; then
@@ -1221,12 +1414,12 @@ function wallet_exist()
 		wallet_list_output=$(docker run --rm \
 			--interactive \
 			--tty \
-			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
-			"${CONTAINER_NAME}" process keys list)
+			--volume "${DOCKER_VOLUME}" \
+			"${CONTAINER_NAME}" keys list --keyring.backend "${BACKEND}")
 	fi
 
 	# Use grep to check if the wallet name is in the list
-	if echo "$wallet_list_output" | grep -q "\b$WALLET_NAME\b"
+	if echo "$wallet_list_output" | grep -qw "$WALLET_NAME"
 	then
 		return 0
 	else
@@ -1248,14 +1441,14 @@ function wallet_remove()
 	then
 		echo "${WALLET_PASSPHRASE}" | docker run --rm \
 			--interactive \
-			--volume ${CONFIG_DIR}:/root/.sentinelnode \
-			${CONTAINER_NAME} process keys delete $WALLET_NAME > /dev/null 2>&1 || { output_error "Failed to delete wallet."; return 1; }
+			--volume "${DOCKER_VOLUME}" \
+			${CONTAINER_NAME} keys delete --keyring.backend "${BACKEND}" "${WALLET_NAME}" > /dev/null 2>&1 || { output_error "Failed to delete wallet."; return 1; }
 	else
 		docker run --rm \
 			--interactive \
 			--tty \
-			--volume ${CONFIG_DIR}:/root/.sentinelnode \
-			${CONTAINER_NAME} process keys delete $WALLET_NAME > /dev/null 2>&1 || { output_error "Failed to delete wallet."; return 1; }
+			--volume "${DOCKER_VOLUME}" \
+			${CONTAINER_NAME} keys delete --keyring.backend "${BACKEND}" "${WALLET_NAME}" > /dev/null 2>&1 || { output_error "Failed to delete wallet."; return 1; }
 	fi
 	output_success "Wallet has been removed successfully."
 	return 0;
@@ -1265,41 +1458,60 @@ function wallet_remove()
 function wallet_addresses()
 {
 	# If PUBLIC_ADDRESS and NODE_ADDRESS are not empty, return 0
-	if [ ! -z "$PUBLIC_ADDRESS" ] && [ ! -z "$NODE_ADDRESS" ]
+	if [ -n "$PUBLIC_ADDRESS" ] # && [ -n "$NODE_ADDRESS" ]	TODO: check NODE_ADDRESS too
 	then
-		return 0;
+		return 0
 	fi
-
-	# Show waiting message
+	
 	output_info "Please wait while the wallet addresses are being retrieved..."
-
-	# Execute Docker command once and store output
-	local WALLET_INFO=""
 	
-	# If passphrase is required
-	if [ "$BACKEND" == "file" ]
+	# --- Account address (bech: acc) ---
+	local out_acc=""
+	if [ "$BACKEND" = "file" ]
 	then
-		WALLET_INFO=$(echo "${WALLET_PASSPHRASE}" | docker run --rm \
+		out_acc=$(printf '%s\n' "$WALLET_PASSPHRASE" | docker run --rm \
 			--interactive \
-			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
-			"${CONTAINER_NAME}" process keys show | awk -v name="$WALLET_NAME" '$1 == name')
+			--volume "${DOCKER_VOLUME}" \
+			"${CONTAINER_NAME}" keys show --keyring.backend "${BACKEND}" "${WALLET_NAME}" 2>/dev/null)
 	else
-		WALLET_INFO=$(docker run --rm \
+		out_acc=$(docker run --rm \
 			--interactive \
-			--tty \
-			--volume "${CONFIG_DIR}:/root/.sentinelnode" \
-			"${CONTAINER_NAME}" process keys show | awk -v name="$WALLET_NAME" '$1 == name')
+			--volume "${DOCKER_VOLUME}" \
+			"${CONTAINER_NAME}" keys show --keyring.backend "${BACKEND}" "${WALLET_NAME}" 2>/dev/null)
 	fi
-	# Extract public and node addresses from the output
-	PUBLIC_ADDRESS=$(echo "$WALLET_INFO" | awk '{print $3}')
-	NODE_ADDRESS=$(echo "$WALLET_INFO" | awk '{print $2}')
 	
-	# Remove end of line
-	PUBLIC_ADDRESS=$(echo "$PUBLIC_ADDRESS" | tr -d '\r')
-	NODE_ADDRESS=$(echo "$NODE_ADDRESS" | tr -d '\r')
+	# --- Validator/operator address (bech: val) ---
+	local out_val=""
+	if [ "$BACKEND" = "file" ]
+	then
+		out_val=$(printf '%s\n' "$WALLET_PASSPHRASE" | docker run --rm \
+			--interactive \
+			--volume "${DOCKER_VOLUME}" \
+			"${CONTAINER_NAME}" keys show --bech val --keyring.backend "${BACKEND}" "${WALLET_NAME}" 2>/dev/null)
+	else
+		out_val=$(docker run --rm \
+			--interactive \
+			--volume "${DOCKER_VOLUME}" \
+			"${CONTAINER_NAME}" keys show --bech val --keyring.backend "${BACKEND}" "${WALLET_NAME}" 2>/dev/null)
+	fi
 	
+	# --- Parse text output ---
+	PUBLIC_ADDRESS=$(printf '%s\n' "$out_acc" | awk -F': ' '/^address:/ {print $2}' | tr -d '\r' | tr -d '[:space:]')
+	NODE_ADDRESS=$(printf '%s\n' "$out_val" | awk -F': ' '/^address:/ {print $2}' | tr -d '\r' | tr -d '[:space:]')
+	
+	# --- Fallback / errors ---
+	if [ -z "$PUBLIC_ADDRESS" ] # || [ -z "$NODE_ADDRESS" ] TODO: check NODE_ADDRESS too
+	then
+		output_error "Failed to parse wallet addresses."
+		echo "Raw (account):"
+		echo "$out_acc"
+		echo "Raw (validator):"
+		echo "$out_val"
+		return 1
+	fi
+
 	output_success "Wallet addresses have been retrieved successfully."
-	return 0;
+	return 0
 }
 
 # Function to get wallet balance
@@ -2140,14 +2352,14 @@ function menu_installation()
 		wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
 		
 		# If addresses are not valid, display an error message
-		if [[ ! ${PUBLIC_ADDRESS} == "sent"* ]] || [[ ! ${NODE_ADDRESS} == "sentnode"* ]];
+		if [[ ! ${PUBLIC_ADDRESS} == "sent"* ]] # || [[ ! ${NODE_ADDRESS} == "sentnode"* ]]; TODO: re-enable node address check when the issue is fixed
 		then
 			output_error "Invalid addresses found, we will try to reinitialize the wallet."
 			if whiptail --title "Wallet Initialization Issue" \
 				--yes-button "OK" --no-button "Abort" \
 				--yesno "There seems to be an issue with wallet initialization. We will remove the existing wallet and start the initialization process again. Please note that all data associated with the wallet will be permanently lost. You will need to enter the previously saved recovery words again.\n\nDo you want to proceed with wallet removal and re-initialization?" 10 78
 			then
-				wallet_remove || { output_error "Failed to remove wallet. Please do it manually by running the following command: docker run --rm --interactive --tty --volume ${CONFIG_DIR}:/root/.sentinelnode ${CONTAINER_NAME} process keys delete $WALLET_NAME"; return 1; }
+				wallet_remove || { output_error "Failed to remove wallet. Please do it manually by running the following command: docker run --rm --interactive --tty --volume \\\"${DOCKER_VOLUME}\\\" ${CONTAINER_NAME} keys delete --keyring.backend ${BACKEND} $WALLET_NAME"; return 1; }
 			else
 				output_info "Wallet removal aborted. Exiting the script."
 				exit 1
@@ -2533,7 +2745,7 @@ function menu_update()
 function menu_about()
 {
 	# Get the current Node version
-	local NODE_VERSION=$(docker run --rm --tty ${CONTAINER_NAME} process version | tr -d '\r')
+	local NODE_VERSION=$(docker run --rm --tty ${CONTAINER_NAME} version | tr -d '\r')
 	
 	# Display the about menu using whiptail
 	whiptail --title "About" --ok-button "Back" --msgbox "
