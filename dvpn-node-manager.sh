@@ -16,6 +16,7 @@ CONFIG_DIR_V1="${USER_HOME}/.sentinelnode"
 CONFIG_FILE="${CONFIG_DIR}/config.toml"
 CONFIG_WIREGUARD="${CONFIG_DIR}/wireguard/config.toml"
 CONFIG_V2RAY="${CONFIG_DIR}/v2ray/config.toml"
+CONFIG_OPENVPN="${CONFIG_DIR}/openvpn/config.toml"
 CONFIG_TLS_CRT="${CONFIG_DIR}/tls.crt"
 CONFIG_TLS_KEY="${CONFIG_DIR}/tls.key"
 DOCKER_VOLUME="${APP_DIR}:/root/.sentinel-dvpnx"
@@ -31,6 +32,8 @@ NODE_PORT=
 NODE_LOCATION="datacenter"
 WIREGUARD_PORT=
 V2RAY_PORT=
+OPENVPN_PORT=
+OPENVPN_PROTOCOL="udp"
 WALLET_NAME="operator"
 MAX_PEERS=250
 HANDSHAKE_ENABLE=""
@@ -55,7 +58,6 @@ WALLET_BALANCE=""
 WALLET_BALANCE_AMOUNT=0
 WALLET_BALANCE_DENOM="P2P"	
 
-PUBLISH_PORT_ARGS=""
 WALLET_PASSPHRASE=""
 CERTIFICATE_DATE_CREATION=""
 CERTIFICATE_DATE_EXPIRATION=""
@@ -64,6 +66,7 @@ CERTIFICATE_SUBJECT=""
 FIREWALL_PREVIOUS_NODE_PORT=0
 FIREWALL_PREVIOUS_WIREGUARD_PORT=0
 FIREWALL_PREVIOUS_V2RAY_PORT=0
+FIREWALL_PREVIOUS_OPENVPN_PORT=0
 FIREWALL_PREVIOUS_NODE_TYPE=""
 
 # API URLs
@@ -187,13 +190,21 @@ section_found && /enable/ {
 	if [ "$NODE_TYPE" == "wireguard" ]
 	then
 		load_wireguard_config
-		# Duplicate the value to V2RAY_PORT
+		# Duplicate the value to V2RAY_PORT and OPENVPN_PORT
 		V2RAY_PORT=$WIREGUARD_PORT
+		OPENVPN_PORT=$WIREGUARD_PORT
 	elif [ "$NODE_TYPE" == "v2ray" ]
 	then
 		load_v2ray_config
-		# Duplicate the value to WIREGUARD_PORT
+		# Duplicate the value to WIREGUARD_PORT and OPENVPN_PORT
 		WIREGUARD_PORT=$V2RAY_PORT
+		OPENVPN_PORT=$V2RAY_PORT
+	elif [ "$NODE_TYPE" == "openvpn" ]
+	then
+		load_openvpn_config
+		# Duplicate the value to WIREGUARD_PORT and V2RAY_PORT
+		WIREGUARD_PORT=$OPENVPN_PORT
+		V2RAY_PORT=$OPENVPN_PORT
 	fi
 	
 	output_success "Configuration files have been loaded."
@@ -210,6 +221,9 @@ function load_vpn_config()
 	elif [ "$NODE_TYPE" == "v2ray" ]
 	then
 		load_v2ray_config
+	elif [ "$NODE_TYPE" == "openvpn" ]
+	then
+		load_openvpn_config
 	else
 		output_error "Invalid node type."
 		return 1
@@ -250,6 +264,34 @@ function load_v2ray_config()
 	then
 		# Load from V2Ray configuration
 		V2RAY_PORT=$(grep -m1 "^port\s*=" "${CONFIG_V2RAY}" | sed -E 's/.*=\s*"?([0-9]+)"?.*/\1/')
+	fi
+	
+	return 0;
+}
+
+# Function to load openvpn configuration
+function load_openvpn_config()
+{
+	OPENVPN_PORT=""
+	OPENVPN_PROTOCOL="udp"
+	
+	# If openvpn config exists
+	if [ -f "${CONFIG_OPENVPN}" ]
+	then
+		# Load port (only the first port=)
+		OPENVPN_PORT=$(grep -m1 "^[[:space:]]*port[[:space:]]*=" "${CONFIG_OPENVPN}" | sed -E 's/.*=\s*"?([0-9]+)"?.*/\1/')
+		
+		# Load protocol if present: protocol = "udp" | "tcp"
+		local proto_line
+		proto_line=$(grep -m1 -E "^[[:space:]]*(protocol)[[:space:]]*=" "${CONFIG_OPENVPN}")
+		if [ -n "$proto_line" ]
+		then
+			OPENVPN_PROTOCOL=$(echo "$proto_line" | sed -E 's/.*=\s*"?([a-zA-Z]+)"?.*/\1/' | tr '[:upper:]' '[:lower:]')
+			# Sanity fallback
+			if [[ "$OPENVPN_PROTOCOL" != "udp" && "$OPENVPN_PROTOCOL" != "tcp" ]]; then
+				OPENVPN_PROTOCOL="udp"
+			fi
+		fi
 	fi
 	
 	return 0;
@@ -357,6 +399,12 @@ function refresh_config_files()
 	then
 		# Update V2Ray port
 		sed -i "0,/^port[[:space:]]*=.*/s//port = ${V2RAY_PORT}/" "${CONFIG_V2RAY}" || { output_error "Failed to set V2Ray port."; return 1; }
+	elif [ "$NODE_TYPE" == "openvpn" ]
+	then
+		# Update OpenVPN port (only the first occurrence)
+		sed -i "0,/^[[:space:]]*port[[:space:]]*=.*/s//port = ${OPENVPN_PORT}/" "${CONFIG_OPENVPN}" || { output_error "Failed to set OpenVPN port."; return 1; }
+		# Update OpenVPN protocol
+		sed -i "0,/^[[:space:]]*protocol[[:space:]]*=.*/s//protocol = \"${OPENVPN_PROTOCOL}\"/" "${CONFIG_OPENVPN}"
 	fi
 	
 	output_success "Configuration files have been refreshed."
@@ -446,6 +494,13 @@ function generate_vpn_config()
 		if [ ! -f "${CONFIG_V2RAY}" ]
 		then
 			output_info "V2Ray configuration is handled by sentinel-dvpnx init; skipping legacy generation."
+		fi
+	elif [ "$NODE_TYPE" == "openvpn" ]
+	then
+		# If openvpn config not generated
+		if [ ! -f "${CONFIG_OPENVPN}" ]
+		then
+			output_info "OpenVPN configuration is handled by sentinel-dvpnx init; skipping legacy generation."
 		fi
 	else
 		output_error "Invalid node type."
@@ -1094,8 +1149,6 @@ function container_start()
 				"--publish" "${NODE_PORT}:${NODE_PORT}/tcp"
 				"--publish" "${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp"
 			)
-			# Append publish args
-			docker_run_passphrase_args+=("${publish_args_array[@]}")
 			docker_run_passphrase_args+=("${CONTAINER_NAME}" "start")
 			
 			# Build the command string
@@ -1127,10 +1180,8 @@ function container_start()
 				"--publish" "${NODE_PORT}:${NODE_PORT}/tcp"
 				"--publish" "${WIREGUARD_PORT}:${WIREGUARD_PORT}/udp"
 			)
-			# Append publish args
-			docker_run_args+=("${publish_args_array[@]}")
 			docker_run_args+=("${CONTAINER_NAME}" "start")
-
+			
 			# Execute the docker run command
 			if ! "${docker_run_args[@]}" > /dev/null 2>&1
 			then
@@ -1154,8 +1205,6 @@ function container_start()
 				"--publish" "${NODE_PORT}:${NODE_PORT}/tcp"
 				"--publish" "${V2RAY_PORT}:${V2RAY_PORT}/tcp"
 			)
-			# Append publish args
-			docker_run_passphrase_args+=("${publish_args_array[@]}")
 			docker_run_passphrase_args+=("${CONTAINER_NAME}" "start")
 			
 			# Build the command string
@@ -1177,13 +1226,55 @@ function container_start()
 				"--publish" "${NODE_PORT}:${NODE_PORT}/tcp"
 				"--publish" "${V2RAY_PORT}:${V2RAY_PORT}/tcp"
 			)
-			# Append publish args
-			docker_run_args+=("${publish_args_array[@]}")
 			docker_run_args+=("${CONTAINER_NAME}" "start")
 			# Execute the docker run command
 			if ! "${docker_run_args[@]}" > /dev/null 2>&1
 			then
 				output_error "Failed to start V2Ray node."
+				return 1
+			fi
+		fi
+	elif [ "$NODE_TYPE" == "openvpn" ]
+	then
+		# If passphrase is required
+		if [ "$BACKEND" == "file" ]
+		then
+			# Start OpenVPN node
+			local -a docker_run_passphrase_args=(
+				"docker" "run"
+				"--interactive"
+				"--name" "${CONTAINER_NAME}"
+				"--sig-proxy=false"
+				"--detach-keys=ctrl-q"
+				"--volume" "${DOCKER_VOLUME}"
+				"--publish" "${NODE_PORT}:${NODE_PORT}/tcp"
+				"--publish" "${OPENVPN_PORT}:${OPENVPN_PORT}/${OPENVPN_PROTOCOL}"
+			)
+			docker_run_passphrase_args+=("${CONTAINER_NAME}" "start")
+
+			# Build the command string
+			local docker_run_passphrase_cmd
+			docker_run_passphrase_cmd=$(printf '%q ' "${docker_run_passphrase_args[@]}")
+
+			# Launch in background with passphrase
+			nohup bash -c "echo '${WALLET_PASSPHRASE}' | ${docker_run_passphrase_cmd}" > /dev/null 2>&1 &
+			disown
+			sleep 5
+		else
+			# Start OpenVPN node
+			local -a docker_run_args=(
+				"docker" "run" "-d"
+				"--name" "${CONTAINER_NAME}"
+				"--restart" "unless-stopped"
+				"--volume" "${DOCKER_VOLUME}"
+				"--publish" "${NODE_PORT}:${NODE_PORT}/tcp"
+				"--publish" "${OPENVPN_PORT}:${OPENVPN_PORT}/${OPENVPN_PROTOCOL}"
+			)
+			docker_run_args+=("${CONTAINER_NAME}" "start")
+
+			if ! "${docker_run_args[@]}" > /dev/null 2>&1
+			then
+				output_error "Failed to start OpenVPN node."
 				return 1
 			fi
 		fi
@@ -1612,6 +1703,13 @@ function firewall_configure()
 		FIREWALL_PREVIOUS_V2RAY_PORT=0;
 	fi
 	
+	# If node type is OpenVPN and OpenVPN port is not empty
+	if [ "$NODE_TYPE" = "openvpn" ] && [ ! -z "$OPENVPN_PORT" ]
+	then
+		firewall_delete_port $FIREWALL_PREVIOUS_OPENVPN_PORT "$OPENVPN_PROTOCOL" || { output_error "Failed to delete previous OpenVPN port."; return 1; }
+		FIREWALL_PREVIOUS_OPENVPN_PORT=0;
+	fi
+	
 	# If previous node type is not empty and types are different
 	if [ ! -z "$FIREWALL_PREVIOUS_NODE_TYPE" ] && [ "$FIREWALL_PREVIOUS_NODE_TYPE" != "$NODE_TYPE" ]
 	then
@@ -1625,6 +1723,11 @@ function firewall_configure()
 		then
 			firewall_delete_port $V2RAY_PORT "tcp" || { output_error "Failed to delete previous V2Ray port."; return 1; }
 			FIREWALL_PREVIOUS_V2RAY_PORT=0;
+		# If previous node type is OpenVPN
+		elif [ "$FIREWALL_PREVIOUS_NODE_TYPE" = "openvpn" ]
+		then
+			firewall_delete_port $OPENVPN_PORT "$OPENVPN_PROTOCOL" || { output_error "Failed to delete previous OpenVPN port."; return 1; }
+			FIREWALL_PREVIOUS_OPENVPN_PORT=0;
 		fi
 	fi
 	# Delete the previous node type value as the information is no longer useful
@@ -1638,6 +1741,9 @@ function firewall_configure()
 	elif [ "$NODE_TYPE" = "v2ray" ]
 	then
 		firewall_allow_port $V2RAY_PORT "tcp" || { output_error "Failed to allow V2Ray."; return 1; }
+	elif [ "$NODE_TYPE" = "openvpn" ]
+	then
+		firewall_allow_port $OPENVPN_PORT "$OPENVPN_PROTOCOL" || { output_error "Failed to allow OpenVPN."; return 1; }
 	fi
 	
 	# Reload UFW
@@ -1706,6 +1812,9 @@ function firewall_reset()
 	elif [ "$NODE_TYPE" = "v2ray" ]
 	then
 		firewall_delete_port $V2RAY_PORT "tcp" || { output_error "Failed to delete V2Ray."; return 1; }
+	elif [ "$NODE_TYPE" = "openvpn" ]
+	then
+		firewall_delete_port $OPENVPN_PORT "$OPENVPN_PROTOCOL" || { output_error "Failed to delete OpenVPN."; return 1; }
 	fi
 	
 	return 0;
@@ -1799,7 +1908,8 @@ function ask_node_port()
 		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]] && \
 			[[ "$VALUE" -ge 1024 ]] && [[ "$VALUE" -le 65535 ]] && \
 			( [[ -z "$WIREGUARD_PORT" ]] || [[ "$VALUE" -ne "$WIREGUARD_PORT" ]] ) && \
-			( [[ -z "$V2RAY_PORT" ]] || [[ "$VALUE" -ne "$V2RAY_PORT" ]] )
+			( [[ -z "$V2RAY_PORT" ]] || [[ "$VALUE" -ne "$V2RAY_PORT" ]] ) && \
+			( [[ -z "$OPENVPN_PORT" ]] || [[ "$VALUE" -ne "$OPENVPN_PORT" ]] )
 		then
 			break
 		fi
@@ -1828,6 +1938,9 @@ function ask_vpn_port()
 	elif [ "$NODE_TYPE" = "v2ray" ]
 	then
 		ask_v2ray_port
+	elif [ "$NODE_TYPE" = "openvpn" ]
+	then
+		ask_openvpn_port
 	fi
 }
 
@@ -1897,6 +2010,47 @@ function ask_v2ray_port()
 	return 0;
 }
 
+# Function to ask for OpenVPN port (plus protocole si besoin)
+function ask_openvpn_port()
+{
+	local VALUE=""
+
+	while true
+	do
+		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for OpenVPN (1024-65535):" 8 78 "$OPENVPN_PORT" \
+			--title "OpenVPN Port" 3>&1 1>&2 2>&3) || { return 1; }
+		
+		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]] && \
+			[[ "$VALUE" -ge 1024 ]] && [[ "$VALUE" -le 65535 ]] && \
+			[[ "$VALUE" -ne "$NODE_PORT" ]]
+		then
+			break
+		fi
+	done
+	
+	# If VALUE is different of $OPENVPN_PORT
+	if [ "$VALUE" -ne "$OPENVPN_PORT" ]
+	then
+		# Store the value in FIREWALL_PREVIOUS_OPENVPN_PORT to delete it from the firewall
+		FIREWALL_PREVIOUS_OPENVPN_PORT=$OPENVPN_PORT
+		OPENVPN_PORT=$VALUE
+	else
+		FIREWALL_PREVIOUS_OPENVPN_PORT=0
+	fi
+
+	# Ask for protocol
+	local PROTO_SELECT=$(whiptail --title "OpenVPN Protocol" --radiolist \
+		"Select the transport protocol for OpenVPN:" 12 50 2 \
+		"udp" "Recommended (faster)" ON \
+		"tcp" "Alternative" OFF 3>&1 1>&2 2>&3) || true
+
+	if [ -n "$PROTO_SELECT" ]; then
+		OPENVPN_PROTOCOL="$PROTO_SELECT"
+	fi
+
+	return 0;
+}
+
 # Function to ask for configure firewall
 function ask_firewall_configure()
 {
@@ -1951,6 +2105,7 @@ function ask_node_type()
 	# Set initial state based on current $NODE_TYPE
 	local wireguard_state="OFF"
 	local v2ray_state="OFF"
+	local openvpn_state="OFF"
 
 	if [ "$NODE_TYPE" == "wireguard" ]
 	then
@@ -1958,14 +2113,19 @@ function ask_node_type()
 	elif [ "$NODE_TYPE" == "v2ray" ]
 	then
 		v2ray_state="ON"
+	elif [ "$NODE_TYPE" == "openvpn" ]
+	then
+		openvpn_state="ON"
 	else
 		wireguard_state="ON"
 	fi
 
 	# Ask for node type using whiptail
-	local VALUE=$(whiptail --title "Node Type" --radiolist "Please select the type of node you want to run:" 15 78 2 \
+	local VALUE=$(whiptail --title "Node Type" --radiolist "Please select the type of node you want to run:" 15 78 3 \
 		"wireguard" "WireGuard" $wireguard_state \
-		"v2ray" "V2Ray" $v2ray_state 3>&1 1>&2 2>&3)
+		"v2ray" "V2Ray" $v2ray_state \
+		"openvpn" "OpenVPN" $openvpn_state \
+		3>&1 1>&2 2>&3)
 	
 	# Check if the user pressed Cancel
 	if [ -z "$VALUE" ]
@@ -1978,14 +2138,14 @@ function ask_node_type()
 	# Set value received from whiptail to NODE_TYPE
 	NODE_TYPE=$VALUE
 
-	# If node type is V2Ray
-	if [ "$NODE_TYPE" == "v2ray" ];
+	# If node type is WireGuard
+	if [ "$NODE_TYPE" == "wireguard" ];
 	then
-		# Force handshake to be disabled for V2Ray
-		HANDSHAKE_ENABLE="false"
-	else
 		# Force handshake to be enabled for WireGuard
 		HANDSHAKE_ENABLE="true"
+	else
+		# Force handshake to be disabled for other node types
+		HANDSHAKE_ENABLE="false"
 	fi
 
 	return 0;
@@ -2220,6 +2380,9 @@ function message_port_forwarding()
 		elif [ "$NODE_TYPE" == "v2ray" ]
 		then
 			MESSAGE+="   - V2Ray Port: ${V2RAY_PORT}/tcp\n"
+		elif [ "$NODE_TYPE" == "openvpn" ]
+		then
+			MESSAGE+="   - OpenVPN Port: ${OPENVPN_PORT}/${OPENVPN_PROTOCOL}\n"
 		fi
 		
 		MESSAGE+="\nIt is essential to complete this step for your node to function properly and be accessible from the Internet."
@@ -2234,6 +2397,9 @@ function message_port_forwarding()
 		elif [ "$NODE_TYPE" == "v2ray" ]
 		then
 			MESSAGE+="   - V2Ray Port: ${V2RAY_PORT}/tcp\n"
+		elif [ "$NODE_TYPE" == "openvpn" ]
+		then
+			MESSAGE+="   - OpenVPN Port: ${OPENVPN_PORT}/${OPENVPN_PROTOCOL}\n"
 		fi
 		
 		MESSAGE+="\nMake sure these ports are accessible to allow your node to function properly.\n"
@@ -2504,6 +2670,9 @@ function menu_settings()
 		elif [ "$NODE_TYPE" = "v2ray" ]
 		then
 			MESSAGE+="  - V2Ray Port: ${V2RAY_PORT}/tcp\n"
+		elif [ "$NODE_TYPE" = "openvpn" ]
+		then
+			MESSAGE+="  - OpenVPN Port: ${OPENVPN_PORT}/${OPENVPN_PROTOCOL}\n"
 		fi
 		MESSAGE+="See more at: https://${NODE_IP}:${NODE_PORT}/status\n"
 		MESSAGE+="\nChoose a settings group to configure:"
@@ -2736,7 +2905,7 @@ function menu_update()
 	
 	while true
 	do
-		# Menu pour choisir entre metre à jour le container et la configuration blockchain
+		# Menu to choose between updating the container and the blockchain configuration
 		CHOICE=$(whiptail --title "Update Sentinel Node" --menu "Choose an option:" 15 60 5 \
 			"Container" "Update the dVPN node container" \
 			"Network" "Update the dVPN node network configuration" \
