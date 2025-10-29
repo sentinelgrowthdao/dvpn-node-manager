@@ -1436,7 +1436,7 @@ function wallet_exist()
 function wallet_remove()
 {
 	# If wallet does not exist, return 0
-	if wallet_exist
+	if ! wallet_exist
 	then
 		return 0;
 	fi
