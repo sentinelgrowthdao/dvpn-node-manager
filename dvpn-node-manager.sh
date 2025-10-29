@@ -3012,28 +3012,28 @@ echo "Script Version: ${INSTALLER_VERSION}"
 if ! command -v whiptail &> /dev/null
 then
 	output_info "Installing whiptail, please wait..."
-	apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; return 1; }
+	apt install -y whiptail || { echo -e "\e[31mFailed to install whiptail.\e[0m"; exit 1; }
 fi
 
 # Check if jq is not installed
 if ! command -v jq &> /dev/null
 then
 	output_info "Installing jq, please wait..."
-	apt install -y jq || { output_error "Failed to install jq."; return 1; }
+	apt install -y jq || { output_error "Failed to install jq."; exit 1; }
 fi
 
 # Check if curl is not installed
 if ! command -v curl &> /dev/null
 then
 	output_info "Installing curl, please wait..."
-	apt install -y curl || { output_error "Failed to install curl."; return 1; }
+	apt install -y curl || { output_error "Failed to install curl."; exit 1; }
 fi
 
 # Check if openssl is not installed
 if ! command -v openssl &> /dev/null
 then
 	output_info "Installing openssl, please wait..."
-	apt install -y openssl || { output_error "Failed to install openssl."; return 1; }
+	apt install -y openssl || { output_error "Failed to install openssl."; exit 1; }
 fi
 
 # If parameter "uninstall" is passed, remove the Sentinel node
@@ -3112,7 +3112,7 @@ elif [ "$1" == "balance" ]
 then
 	load_config_files || exit 1;
 	ask_wallet_passphrase || exit 1;
-	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
+	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; exit 1; }
 	wallet_balance || exit 1;
 	output_info "The node's wallet balance is: ${WALLET_BALANCE}"
 	whiptail --title "Wallet Balance" --msgbox "The node's wallet balance is: ${WALLET_BALANCE}" 8 78
@@ -3126,7 +3126,7 @@ elif [ "$1" == "check-port" ]
 then
 	load_config_files || exit 1;
 	ask_wallet_passphrase || exit 1;
-	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
+	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; exit 1; }
 	network_check_port || exit 1;
 	whiptail --title "Port check" --msgbox "Congratulations! Your node is accessible from the Internet." 8 78
 	output_success "Congratulations! The node is accessible from the Internet."
