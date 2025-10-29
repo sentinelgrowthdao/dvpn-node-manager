@@ -2754,10 +2754,13 @@ function menu_about()
 {
 	# Get the current Node version
 	local NODE_VERSION=$(docker run --rm --tty ${CONTAINER_NAME} version | tr -d '\r')
+
+	# Get the server model
+	local SERVER_MODEL="$(command -v dmidecode >/dev/null 2>&1 && dmidecode -s system-product-name || echo 'N/A')"
 	
 	# Display the about menu using whiptail
 	whiptail --title "About" --ok-button "Back" --msgbox "
-	Server Model: $(dmidecode -s system-product-name)
+	Server Model: ${SERVER_MODEL}
 	Operating System: $(lsb_release -is) $(lsb_release -rs)
 	Kernel Version: $(uname -r)
 	Architecture: $(uname -m)
