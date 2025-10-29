@@ -411,9 +411,9 @@ function generate_node_config()
 			--node.interval-session-usage-sync-with-blockchain "540s" \
 			--node.interval-session-validate "60s" \
 			--node.interval-status-update "240s" \
-			--node.service-type "wireguard" \
-			--rpc.addrs "https://rpc-bluenet.sentinel.co:443" \
-			--rpc.chain-id "bluenet-2-2" \
+			--node.service-type "$NODE_TYPE" \
+			--rpc.addrs "$(echo "$RPC_ADDRESSES" | cut -d',' -f1)" \
+			--rpc.chain-id $CHAIN_ID \
 			--tx.from-name "${WALLET_NAME}" \
 			"${remote_flags[@]}" || { output_error "Failed to generate Sentinel configuration."; return 1; }
 		output_success "The dVPN node configuration has been generated."
