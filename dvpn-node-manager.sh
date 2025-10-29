@@ -1791,10 +1791,11 @@ function ask_node_port()
 		# Ask for node port
 		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for the node:" 8 78 "$NODE_PORT" \
 			--title "Node Port" 3>&1 1>&2 2>&3) || { return 1; }
-		# If value is not empty and is integer (between 1024 and 65535) and different of $WIREGUARD_PORT or $V2RAY_PORT
+		# If value is not empty and is integer (between 1024 and 65535) and different from $WIREGUARD_PORT or $V2RAY_PORT (if set)
 		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]] && \
 			[[ "$VALUE" -ge 1024 ]] && [[ "$VALUE" -le 65535 ]] && \
-			[[ "$VALUE" -ne "$WIREGUARD_PORT" ]] && [[ "$VALUE" -ne "$V2RAY_PORT" ]]
+			( [[ -z "$WIREGUARD_PORT" ]] || [[ "$VALUE" -ne "$WIREGUARD_PORT" ]] ) && \
+			( [[ -z "$V2RAY_PORT" ]] || [[ "$VALUE" -ne "$V2RAY_PORT" ]] )
 		then
 			break
 		fi
