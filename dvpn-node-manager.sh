@@ -485,7 +485,7 @@ function remove_config_files()
 	
 	output_info "Please wait while the configuration files are being removed..."
 	# Remove configuration files
-	rm -rf ${CONFIG_DIR}
+	rm -rf "${CONFIG_DIR}"
 	
 	output_success "Configuration files have been removed."
 	return 0;
@@ -2787,7 +2787,7 @@ function action_uninstall()
 	# Remove the configuration files
 	remove_config_files
 	# Remove the Sentinel node directory
-	rm -rf ${CONFIG_DIR} || { output_error "Failed to remove dVPN node directory."; exit 1; }
+	rm -rf "${CONFIG_DIR}" || { output_error "Failed to remove dVPN node directory."; exit 1; }
 }
 
 ####################################################################################################
