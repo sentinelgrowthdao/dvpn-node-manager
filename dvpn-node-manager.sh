@@ -479,35 +479,55 @@ function generate_node_config()
 # Function to generate vpn configuration
 function generate_vpn_config()
 {
-	# If node type is wireguard
-	if [ "$NODE_TYPE" == "wireguard" ]
+	local need_init=0
+
+	if [ "$NODE_TYPE" = "wireguard" ]
 	then
-		# If wireguard config not generated
-		if [ ! -f "${CONFIG_WIREGUARD}" ]
-		then
-			output_info "WireGuard configuration is handled by sentinel-dvpnx init; skipping legacy generation."
-		fi
-	# If node type is v2ray
-	elif [ "$NODE_TYPE" == "v2ray" ]
+		[ ! -f "${CONFIG_WIREGUARD}" ] && need_init=1
+	elif [ "$NODE_TYPE" = "v2ray" ]
 	then
-		# If v2ray config not generated
-		if [ ! -f "${CONFIG_V2RAY}" ]
-		then
-			output_info "V2Ray configuration is handled by sentinel-dvpnx init; skipping legacy generation."
-		fi
-	elif [ "$NODE_TYPE" == "openvpn" ]
+		[ ! -f "${CONFIG_V2RAY}" ] && need_init=1
+	elif [ "$NODE_TYPE" = "openvpn" ]
 	then
-		# If openvpn config not generated
-		if [ ! -f "${CONFIG_OPENVPN}" ]
-		then
-			output_info "OpenVPN configuration is handled by sentinel-dvpnx init; skipping legacy generation."
-		fi
+		[ ! -f "${CONFIG_OPENVPN}" ] && need_init=1
 	else
 		output_error "Invalid node type."
 		return 1
 	fi
-	
-	return 0;
+
+	if [ $need_init -eq 1 ]
+	then
+		output_info "Generating service configuration for ${NODE_TYPE}..."
+
+		# Build remote address flags (same logic as generate_node_config)
+		local remote_flags=()
+		if [ -n "${NODE_IP}" ] && [ "${NODE_IP}" != "0.0.0.0" ]; then
+			remote_flags+=( "--node.remote-addrs" "${NODE_IP}" )
+		fi
+		if [ -n "${NODE_IPV6}" ] && [ "${NODE_IPV6}" != "::1" ]; then
+			remote_flags+=( "--node.remote-addrs" "${NODE_IPV6}" )
+		fi
+
+		docker run --rm \
+			--volume "${DOCKER_VOLUME}" \
+			${CONTAINER_NAME} init \
+			--keyring.backend "${BACKEND}" \
+			--node.interval-session-usage-sync-with-blockchain "540s" \
+			--node.interval-session-validate "60s" \
+			--node.interval-status-update "240s" \
+			--node.service-type "${NODE_TYPE}" \
+			--rpc.addrs "$(echo "$RPC_ADDRESSES" | cut -d',' -f1)" \
+			--rpc.chain-id "${CHAIN_ID}" \
+			--tx.from-name "${WALLET_NAME}" \
+			"${remote_flags[@]}" \
+			|| { output_error "Failed to generate ${NODE_TYPE} configuration."; return 1; }
+
+		output_success "Service configuration generated for ${NODE_TYPE}."
+	else
+		output_info "Service configuration for ${NODE_TYPE} already exists."
+	fi
+
+	return 0
 }
 
 # Function to remove vpn configuration files
