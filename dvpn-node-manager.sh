@@ -12,6 +12,7 @@ USER_HOME=$(getent passwd ${USER_NAME} | cut -d: -f6)
 # Configuration file access paths
 APP_DIR="${USER_HOME}/.sentinel-dvpnx"
 CONFIG_DIR="${APP_DIR}"
+CONFIG_DIR_V1="${USER_HOME}/.sentinelnode"
 CONFIG_FILE="${CONFIG_DIR}/config.toml"
 CONFIG_WIREGUARD="${CONFIG_DIR}/wireguard/config.toml"
 CONFIG_V2RAY="${CONFIG_DIR}/v2ray/config.toml"
@@ -486,6 +487,7 @@ function remove_config_files()
 	output_info "Please wait while the configuration files are being removed..."
 	# Remove configuration files
 	rm -rf "${CONFIG_DIR}"
+	rm -rf "${CONFIG_DIR_V1}"
 	
 	output_success "Configuration files have been removed."
 	return 0;
