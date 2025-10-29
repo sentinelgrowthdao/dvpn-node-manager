@@ -22,7 +22,7 @@ DOCKER_VOLUME="${APP_DIR}:/root/.sentinel-dvpnx"
 # Configuration variables
 CONTAINER_NAME="sentinel-dvpnx"
 NODE_MONIKER=""
-NODE_TYPE=""
+NODE_TYPE="wireguard"
 NODE_IP="0.0.0.0"
 NODE_IPV6=""
 NODE_COUNTRY="NA"
