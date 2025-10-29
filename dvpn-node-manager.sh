@@ -945,9 +945,6 @@ function install_docker()
 		fi
 	fi
 	
-	# Install dependencies
-	apt install -y git || { output_error "Failed to install dependencies."; return 1; }
-	
 	# Download and execute the Docker installation script
 	set -o pipefail
 	curl -fsSL get.docker.com | sh || { output_error "Failed to install Docker."; return 1; }
