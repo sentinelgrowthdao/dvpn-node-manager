@@ -1876,7 +1876,9 @@ function ask_v2ray_port()
 		VALUE=$(whiptail --inputbox "Please enter the port number you want to use for V2Ray:" 8 78 "$V2RAY_PORT" \
 			--title "V2Ray Port" 3>&1 1>&2 2>&3) || { return 1; }
 		# If value is not empty and is integer and is different of $NODE_PORT
-		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]] && [[ "$VALUE" -ne "$NODE_PORT" ]]
+		if [[ ! -z "$VALUE" ]] && [[ "$VALUE" =~ ^[0-9]+$ ]] && \
+			[[ "$VALUE" -ge 1024 ]] && [[ "$VALUE" -le 65535 ]] && \
+			[[ "$VALUE" -ne "$NODE_PORT" ]]
 		then
 			break
 		fi
