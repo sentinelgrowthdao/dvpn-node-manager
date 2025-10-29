@@ -2409,8 +2409,16 @@ function menu_installation()
 	# Check if the node is accessible from the Internet
 	network_check_port || return 1;
 	
-	# Get local IP address
-	local LOCAL_IP=$(ip addr show wlan0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
+	# Get local IP address from default route
+	local LOCAL_IP=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '/src/{print $7; exit}')
+	# If LOCAL_IP is empty, get the first non-localhost, non-docker, non-bridge, non-veth IP address
+	if [ -z "$LOCAL_IP" ]; then
+		LOCAL_IP=$(ip -o -4 addr show | awk '!/ lo / && !/ docker0|br-|veth/ {print $4}' | cut -d/ -f1 | head -n1)
+	fi
+	# If LOCAL_IP is still empty, try to get it using hostname -I
+	if [ -z "$LOCAL_IP" ]; then
+		LOCAL_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+	fi
 	
 	# Message to display after the node has been successfully installed and started
 	local MESSAGE="Congratulations on successfully installing and starting your dVPN node! It is now fully operational and accessible from the Internet.\n\n"
