@@ -1979,7 +1979,7 @@ function ask_wireguard_port()
 	done
 	
 	# If VALUE is different of $WIREGUARD_PORT
-	if [ "$VALUE" -ne "$WIREGUARD_PORT" ]
+	if [ -z "$WIREGUARD_PORT" ] || [ "$VALUE" -ne "$WIREGUARD_PORT" ]
 	then
 		# Store the value in FIREWALL_PREVIOUS_WIREGUARD_PORT to delete it from the firewall
 		FIREWALL_PREVIOUS_WIREGUARD_PORT=$WIREGUARD_PORT
@@ -2012,7 +2012,7 @@ function ask_v2ray_port()
 	done
 	
 	# If VALUE is different of $V2RAY_PORT
-	if [ "$VALUE" -ne "$V2RAY_PORT" ]
+	if [ -z "$V2RAY_PORT" ] || [ "$VALUE" -ne "$V2RAY_PORT" ]
 	then
 		# Store the value in FIREWALL_PREVIOUS_V2RAY_PORT to delete it from the firewall
 		FIREWALL_PREVIOUS_V2RAY_PORT=$V2RAY_PORT
@@ -2044,7 +2044,7 @@ function ask_openvpn_port()
 	done
 	
 	# If VALUE is different of $OPENVPN_PORT
-	if [ "$VALUE" -ne "$OPENVPN_PORT" ]
+	if [ -z "$OPENVPN_PORT" ] || [ "$VALUE" -ne "$OPENVPN_PORT" ]
 	then
 		# Store the value in FIREWALL_PREVIOUS_OPENVPN_PORT to delete it from the firewall
 		FIREWALL_PREVIOUS_OPENVPN_PORT=$OPENVPN_PORT
