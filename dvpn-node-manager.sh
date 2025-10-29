@@ -2497,10 +2497,10 @@ function menu_settings()
 		CHOICE=$(whiptail --title "Settings" --menu "${MESSAGE}" 21 60 8 \
 			"1" "Moniker" \
 			"2" "Node Location" \
-			"2" "Network" \
-			"3" "VPN" \
-			"4" "Gigabyte Prices" \
-			"5" "Hourly Prices" \
+			"3" "Network" \
+			"4" "VPN" \
+			"5" "Gigabyte Prices" \
+			"6" "Hourly Prices" \
 			--cancel-button "Back" --ok-button "Select" 3>&1 1>&2 2>&3) || return 1;
 		
 		case $CHOICE in
