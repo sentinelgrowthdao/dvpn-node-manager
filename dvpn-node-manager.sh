@@ -412,7 +412,7 @@ function generate_node_config()
 		docker run --rm \
 			--volume "${DOCKER_VOLUME}" \
 			${CONTAINER_NAME} init \
-			--keyring.backend "test" \
+			--keyring.backend "${BACKEND}" \
 			--node.interval-session-usage-sync-with-blockchain "540s" \
 			--node.interval-session-validate "60s" \
 			--node.interval-status-update "240s" \
