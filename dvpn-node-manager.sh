@@ -1924,7 +1924,7 @@ function ask_node_port()
 	done
 	
 	# If VALUE is different of $NODE_PORT
-	if [ "$VALUE" -ne "$NODE_PORT" ]
+	if [ -z "$NODE_PORT" ] || [ "$VALUE" -ne "$NODE_PORT" ]
 	then
 		# Store the value in FIREWALL_PREVIOUS_NODE_PORT to delete it from the firewall
 		FIREWALL_PREVIOUS_NODE_PORT=$NODE_PORT
