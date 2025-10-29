@@ -527,6 +527,13 @@ function remove_vpn_config_files()
 		output_success "V2Ray configuration has been removed."
 	fi
 	
+	# If openvpn config exists, remove it
+	if [ -f "${CONFIG_OPENVPN}" ]
+	then
+		rm -f ${CONFIG_OPENVPN}
+		output_success "OpenVPN configuration has been removed."
+	fi
+	
 	return 0;
 }
 
