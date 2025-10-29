@@ -244,7 +244,7 @@ function load_v2ray_config()
 	if [ -f "${CONFIG_V2RAY}" ]
 	then
 		# Load from V2Ray configuration
-		V2RAY_PORT=$(grep "^listen_port\s*=" "${CONFIG_V2RAY}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+		V2RAY_PORT=$(grep -m1 "^port\s*=" "${CONFIG_V2RAY}" | sed -E 's/.*=\s*"?([0-9]+)"?.*/\1/')
 	fi
 	
 	return 0;
@@ -350,7 +350,7 @@ function refresh_config_files()
 	elif [ "$NODE_TYPE" == "v2ray" ]
 	then
 		# Update V2Ray port
-		sed -i "s/listen_port = .*/listen_port = ${V2RAY_PORT}/g" ${CONFIG_V2RAY} || { output_error "Failed to set V2Ray port."; return 1; }
+		sed -i "0,/^port[[:space:]]*=.*/s//port = ${V2RAY_PORT}/" "${CONFIG_V2RAY}" || { output_error "Failed to set V2Ray port."; return 1; }
 	fi
 	
 	output_success "Configuration files have been refreshed."
