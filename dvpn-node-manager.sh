@@ -162,6 +162,10 @@ section_found && /enable/ {
 	print $2;  # Affiche uniquement la valeur
 	exit;
 }' $CONFIG_FILE)
+	# If HANDSHAKE_ENABLE is empty, set it to "false"
+	if [ -z "${HANDSHAKE_ENABLE}" ]; then
+		HANDSHAKE_ENABLE="false"
+	fi
 	
 	# Find out if the node is residential or datacenter
 	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
@@ -312,6 +316,7 @@ function refresh_config_files()
 	sed -i "s/^[[:space:]]*backend[[:space:]]*=.*/backend = \"${BACKEND}\"/" ${CONFIG_FILE} || { output_error "Failed to set backend."; return 1; }
 
 	# Update handshake enable parameter
+	[ -z "${HANDSHAKE_ENABLE}" ] && HANDSHAKE_ENABLE="false"
 	sed -i '/^\[handshake_dns\]$/,/^\[/!b; /^\[handshake_dns\]$/,/^\[/ {/^[[:space:]]*enable[[:space:]]*=/s/=.*/= '"${HANDSHAKE_ENABLE}"'/; /^[[:space:]]*\[/b}' "${CONFIG_FILE}"
 
 	# Update max_peers parameter
