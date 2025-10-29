@@ -2971,7 +2971,7 @@ function action_uninstall()
 	# Remove the configuration files
 	remove_config_files
 	# Remove the Sentinel node directory
-	rm -rf "${CONFIG_DIR}" || { output_error "Failed to remove dVPN node directory."; exit 1; }
+	rm -rf "${CONFIG_DIR}" || { output_error "Failed to remove dVPN node directory."; return 1; }
 }
 
 ####################################################################################################
@@ -3053,7 +3053,7 @@ then
 	fi
 	
 	# Perform the uninstallation
-	action_uninstall
+	action_uninstall || { output_error "Uninstall failed."; exit 1; }
 	
 	# Display message indicating that the dVPN node has been removed
 	output_success "The dVPN node has been successfully removed."
