@@ -633,10 +633,18 @@ function check_installation()
 		return 1
 	fi
 	
-	# If wireguard or v2ray config not generated, return false
-	if [ ! -f "${CONFIG_WIREGUARD}" ] && [ ! -f "${CONFIG_V2RAY}" ]
+	# If wireguard, v2ray or openvpn config not generated, return false
+	if [ "$NODE_TYPE" = "wireguard" ] && [ ! -f "${CONFIG_WIREGUARD}" ]
 	then
-		output_info "WireGuard and V2Ray config is not generated."
+		output_info "WireGuard config is not generated."
+		return 1
+	elif [ "$NODE_TYPE" = "v2ray" ] && [ ! -f "${CONFIG_V2RAY}" ]
+	then
+		output_info "V2Ray config is not generated."
+		return 1
+	elif [ "$NODE_TYPE" = "openvpn" ] && [ ! -f "${CONFIG_OPENVPN}" ]
+	then
+		output_info "OpenVPN config is not generated."
 		return 1
 	fi
 	
