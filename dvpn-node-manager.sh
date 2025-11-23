@@ -1095,23 +1095,7 @@ function container_install()
 		return 0
 	fi
 	
-	if os_raspbian
-	then
-		if [[ $(arch) == "arm"* ]]
-		then
-			# IMAGE="wajatmaka/sentinel-arm7-debian:v0.7.1"
-			output_error "Unsupported architecture. Please wait for ARMv7 support."
-			return 1;
-		elif [[ $(arch) == "aarch64"* ]] || [[ $(arch) == "arm64"* ]]
-		then
-			# IMAGE="wajatmaka/sentinel-aarch64-alpine:v0.7.1"
-			output_error "Unsupported architecture. Please wait for ARM64 support."
-			return 1
-		else
-			output_error "Unsupported architecture. Please use ARMv7 or ARM64."
-			return 1
-		fi
-	elif os_ubuntu || os_debian
+	if os_raspbian || os_ubuntu || os_debian
 	then
 		IMAGE="ghcr.io/sentinel-official/sentinel-dvpnx:latest"
 	else
