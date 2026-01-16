@@ -105,7 +105,7 @@ function load_config_files()
 	NODE_TYPE=$(awk -F"=" '/^\[node\]/{flag=1;next} /^\[/{flag=0} flag && /^[[:space:]]*service_type[[:space:]]*=/{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); gsub(/"/,"",$2); print $2; exit}' "${CONFIG_FILE}")
 	
 	# Parse api_port and remote_addrs to get NODE_IP and NODE_PORT
-	local api_raw api_entry="" api_ip="" api_port="" remote_entry=""
+	local api_raw api_entry="" api_ip="" api_port=""
 	api_raw=$(awk -F= '/^\[node\]/{flag=1;next} /^\[/{flag=0} flag && /api_port[[:space:]]*=/{print $2; exit}' "${CONFIG_FILE}" | xargs)
 	api_entry=$(echo "$api_raw" | sed -E 's/^\[?(.*?)(,.*)?\]?$/\1/' | tr -d '"')
 	
@@ -118,22 +118,37 @@ function load_config_files()
 		?*)      api_ip="$api_entry" ;;
 	esac
 	
-	# Fallback to remote_addrs if api_ip is empty
+	# Fallback to remote_addrs if api_ip is empty. We pick the first IPv4 and IPv6
+	# separately to avoid merging both addresses into a single string.
+	local remote_ipv4="" remote_ipv6="" remote_line=""
 	if [ -z "$api_ip" ]
 	then
-		remote_entry=$(awk -F= '/^\[node\]/{flag=1;next} /^\[/{flag=0} flag && /remote_addrs[[:space:]]*=/{print $2; exit}' "${CONFIG_FILE}" | xargs | sed -E 's/^\[?(.*?)(,.*)?\]?$/\1/' | tr -d '"')
-		remote_entry=${remote_entry#[}
-		remote_entry=${remote_entry%\]}
+		remote_line=$(awk '/^\[node\]/{flag=1;next} /^\[/{flag=0} flag && /remote_addrs[[:space:]]*=/{print; exit}' "${CONFIG_FILE}")
+		if [ -n "$remote_line" ]; then
+			# Extract all candidate addresses (IPv4 or IPv6) from the line, even if they were concatenated
+			mapfile -t remote_candidates < <(echo "$remote_line" | grep -Eo '([0-9]{1,3}(\.[0-9]{1,3}){3}|[0-9a-fA-F:]{2,})')
+			for addr in "${remote_candidates[@]}"; do
+				if [[ "$addr" == *:* ]]; then
+					[ -z "$remote_ipv6" ] && remote_ipv6="$addr"
+				else
+					[ -z "$remote_ipv4" ] && remote_ipv4="$addr"
+				fi
+			done
+		fi
 	fi
 	
 	# Set NODE_PORT and NODE_IP
 	[ -n "$api_port" ] && NODE_PORT="$api_port"
 	if [ -n "$api_ip" ]; then
 		NODE_IP="$api_ip"
-	elif [ -n "$remote_entry" ]; then
-		NODE_IP="$remote_entry"
+	elif [ -n "$remote_ipv4" ]; then
+		NODE_IP="$remote_ipv4"
 	elif [ -z "$NODE_IP" ]; then
 		NODE_IP="0.0.0.0"
+	fi
+	# Preserve IPv6 if available
+	if [ -z "$NODE_IPV6" ] && [ -n "$remote_ipv6" ]; then
+		NODE_IPV6="$remote_ipv6"
 	fi
 	
 	# Load chain_id from rpc section
@@ -374,20 +389,35 @@ function refresh_config_files()
 	# Update Gas price parameters
 	sed -i "s/^[[:space:]]*gas_prices[[:space:]]*=.*/gas_prices = \"${GAS_PRICES}\"/" ${CONFIG_FILE} || { output_error "Failed to set gas price."; return 1; }
 	
-	# Update prices parameters
-	if [ "$NODE_LOCATION" == "residential" ]
+	# Update prices parameters only if missing in config
+	local existing_gigabyte_prices
+	local existing_hourly_prices
+	existing_gigabyte_prices=$(grep "^[[:space:]]*gigabyte_prices[[:space:]]*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	existing_hourly_prices=$(grep "^[[:space:]]*hourly_prices[[:space:]]*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	if [ -z "$existing_gigabyte_prices" ] || [ -z "$existing_hourly_prices" ]
 	then
-		# Update gigabyte_prices parameter
-		sed -i "s/^[[:space:]]*gigabyte_prices[[:space:]]*=.*/gigabyte_prices = \"${RESIDENTIAL_GIGABYTE_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set gigabyte prices."; return 1; }
-		
-		# Update hourly_prices parameter
-		sed -i "s/^[[:space:]]*hourly_prices[[:space:]]*=.*/hourly_prices = \"${RESIDENTIAL_HOURLY_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
-	else
-		# Update gigabyte_prices parameter
-		sed -i "s/^[[:space:]]*gigabyte_prices[[:space:]]*=.*/gigabyte_prices = \"${DATACENTER_GIGABYTE_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set gigabyte prices."; return 1; }
-		
-		# Update hourly_prices parameter
-		sed -i "s/^[[:space:]]*hourly_prices[[:space:]]*=.*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
+		if [ "$NODE_LOCATION" == "residential" ]
+		then
+			# Update gigabyte_prices parameter
+			if [ -z "$existing_gigabyte_prices" ]; then
+				sed -i "s/^[[:space:]]*gigabyte_prices[[:space:]]*=.*/gigabyte_prices = \"${RESIDENTIAL_GIGABYTE_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set gigabyte prices."; return 1; }
+			fi
+			
+			# Update hourly_prices parameter
+			if [ -z "$existing_hourly_prices" ]; then
+				sed -i "s/^[[:space:]]*hourly_prices[[:space:]]*=.*/hourly_prices = \"${RESIDENTIAL_HOURLY_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
+			fi
+		else
+			# Update gigabyte_prices parameter
+			if [ -z "$existing_gigabyte_prices" ]; then
+				sed -i "s/^[[:space:]]*gigabyte_prices[[:space:]]*=.*/gigabyte_prices = \"${DATACENTER_GIGABYTE_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set gigabyte prices."; return 1; }
+			fi
+			
+			# Update hourly_prices parameter
+			if [ -z "$existing_hourly_prices" ]; then
+				sed -i "s/^[[:space:]]*hourly_prices[[:space:]]*=.*/hourly_prices = \"${DATACENTER_HOURLY_PRICES//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to set hourly prices."; return 1; }
+			fi
+		fi
 	fi
 	
 	# Update vpn configuration
@@ -639,11 +669,11 @@ function check_installation()
 		return 1
 	fi
 	
-	# If user is not in docker group, return false
+	# If user is not in docker group, cancel so they can reload their session
 	if ! groups "$SUDO_USER" | grep -q "\bdocker\b"
 	then
-		output_info "User $SUDO_USER is not in the Docker group."
-		return 1
+		output_error "User $SUDO_USER is not in the Docker group. Please open a new login shell or run 'newgrp docker' (or re-run 'sudo -i -u sentinel') so the group membership takes effect, then run this script again."
+		exit 1
 	fi
 	
 	# If sentinel docker image not installed, return false
@@ -940,6 +970,36 @@ function network_remote_addr()
 	return 0;
 }
 
+# Function to prompt for a new node IP and reapply the configuration after invalid IP is detected
+function handle_invalid_node_ip_for_port_check()
+{
+	while true
+	do
+		ask_remote_ip
+		local prompt_result=$?
+		if [ $prompt_result -eq 0 ]
+		then
+			break
+		elif [ $prompt_result -eq 2 ]
+		then
+			output_error "A valid public IP address is required."
+			continue
+		else
+			return 1
+		fi
+	done
+
+	if [ ! -f "${CONFIG_FILE}" ]
+	then
+		output_error "Configuration file not found, cannot persist the new node IP."
+		return 1
+	fi
+
+	refresh_config_files || return 1
+	container_restart || return 1
+	return 0
+}
+
 # Function to check if the port is open
 function network_check_port()
 {
@@ -1002,6 +1062,13 @@ function network_check_port()
 		then
 			break
 		else
+			# Handle invalid node IP reported by the Foxinodes API
+			if echo "$MESSAGE" | grep -Eiq "invalid ip"
+			then
+				output_error "The configured node IP (${NODE_IP}) is invalid."
+				handle_invalid_node_ip_for_port_check || return 1
+				continue
+			fi
 			# Display error message and ask if user wants to retry
 			if ! whiptail --title "Error" --yes-button "Retry" --no-button "Quit" \
 				--yesno "${MESSAGE}\n\nDo you want to retry?" 10 60
@@ -1902,12 +1969,22 @@ function ask_remote_ip()
 		return 1
 	fi
 
+	# Clean the provided value
+	VALUE=$(echo "$VALUE" | tr -d '\r' | xargs)
+
 	# Check if the user entered a value
 	if [ -z "$VALUE" ]
 	then
 		return 2
 	fi
-	
+
+	# Reject obviously invalid values
+	if [ "$VALUE" = "0.0.0.0" ] || [ "$VALUE" = "::1" ]
+	then
+		output_error "Please enter a publicly routable IP address."
+		return 2
+	fi
+
 	# Set value received from whiptail to NODE_IP
 	NODE_IP=$VALUE
 	return 0;
@@ -2368,20 +2445,34 @@ function message_docker_reboot_required()
 	fi
 }
 
-# Function to display gigabytes prices
-function message_gigabyte_prices()
+# Function to edit gigabyte prices
+function edit_gigabyte_prices()
 {
-	local GIGABYTE_PRICES=$(grep "^gigabyte_prices\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	# Display message with gigabyte prices
-	whiptail --title "Gigabyte Prices" --msgbox "Prices for one gigabyte of bandwidth provided:\n\n${GIGABYTE_PRICES}" 15 78
+	local CURRENT=$(grep "^gigabyte_prices\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	local VALUE=$(whiptail --inputbox "Enter gigabyte_prices value (format: denom:price,amount):" 10 78 "$CURRENT" --title "Gigabyte Prices" 3>&1 1>&2 2>&3) || return 1;
+	VALUE=$(echo "$VALUE" | tr -d '\r' | xargs)
+	if [ -z "$VALUE" ]; then
+		return 1
+	fi
+	sed -i "s/^[[:space:]]*gigabyte_prices[[:space:]]*=.*/gigabyte_prices = \"${VALUE//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to update gigabyte prices."; return 1; }
+	container_restart || return 1;
+	whiptail --title "Gigabyte Prices" --msgbox "Gigabyte prices updated to:\n\n${VALUE}" 10 78
+	return 0
 }
 
-# Function to display hourly prices
-function message_hourly_prices()
+# Function to edit hourly prices
+function edit_hourly_prices()
 {
-	local HOURLY_PRICES=$(grep "^hourly_prices\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
-	# Display message with hourly prices
-	whiptail --title "Hourly Prices" --msgbox "Prices for one hour of bandwidth provided:\n\n${HOURLY_PRICES}" 15 78
+	local CURRENT=$(grep "^hourly_prices\s*=" "${CONFIG_FILE}" | awk -F"=" '{gsub(/^[[:space:]]*|[[:space:]]*$/, "", $2); print $2}' | tr -d '"')
+	local VALUE=$(whiptail --inputbox "Enter hourly_prices value (format: denom:price,amount):" 10 78 "$CURRENT" --title "Hourly Prices" 3>&1 1>&2 2>&3) || return 1;
+	VALUE=$(echo "$VALUE" | tr -d '\r' | xargs)
+	if [ -z "$VALUE" ]; then
+		return 1
+	fi
+	sed -i "s/^[[:space:]]*hourly_prices[[:space:]]*=.*/hourly_prices = \"${VALUE//\//\\/}\"/" ${CONFIG_FILE} || { output_error "Failed to update hourly prices."; return 1; }
+	container_restart || return 1;
+	whiptail --title "Hourly Prices" --msgbox "Hourly prices updated to:\n\n${VALUE}" 10 78
+	return 0
 }
 
 # Function to display port forwarding configuration message
@@ -2696,7 +2787,7 @@ function menu_settings()
 		MESSAGE+="See more at: https://${NODE_IP}:${NODE_PORT}/status\n"
 		MESSAGE+="\nChoose a settings group to configure:"
 		
-		CHOICE=$(whiptail --title "Settings" --menu "${MESSAGE}" 21 60 8 \
+		CHOICE=$(whiptail --title "Settings" --menu "${MESSAGE}" 21 60 9 \
 			"1" "Moniker" \
 			"2" "Node Location" \
 			"3" "Network" \
@@ -2748,10 +2839,10 @@ function menu_settings()
 				fi
 				;;
 			5)
-				message_gigabyte_prices
+				edit_gigabyte_prices
 				;;
 			6)
-				message_hourly_prices
+				edit_hourly_prices
 				;;
 		esac
 	done
