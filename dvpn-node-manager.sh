@@ -615,7 +615,7 @@ function update_container
 	output_info "Please wait while the dVPN node container is being updated..."
 	
 	container_remove || return 1;
-	container_install || return 1;
+	container_update || return 1;
 	container_start || return 1;
 	
 	# Display message indicating that the image is up to date
@@ -1176,6 +1176,26 @@ function container_install()
 	docker tag ${IMAGE} ${CONTAINER_NAME} || { output_error "Failed to tag the Sentinel image."; return 1; }
 	
 	output_success "Sentinel image has been installed successfully."
+	return 0;
+}
+
+# Function to update sentinel image
+function container_update()
+{
+	if os_raspbian || os_ubuntu || os_debian
+	then
+		IMAGE="ghcr.io/sentinel-official/sentinel-dvpnx:latest"
+	else
+		output_error "Unsupported OS. Please use Ubuntu, Debian, or Raspbian."
+		return 1
+	fi
+	
+	# Pull the latest Sentinel image
+	output_info "Updating the Sentinel image, please wait..."
+	docker pull ${IMAGE} || { output_error "Failed to update the Sentinel image."; return 1; }
+	docker tag ${IMAGE} ${CONTAINER_NAME} || { output_error "Failed to refresh the Sentinel image tag."; return 1; }
+	
+	output_success "Sentinel image has been updated successfully."
 	return 0;
 }
 
