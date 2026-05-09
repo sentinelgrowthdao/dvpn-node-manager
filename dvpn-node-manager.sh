@@ -118,21 +118,18 @@ function load_config_files()
 		?*)      api_ip="$api_entry" ;;
 	esac
 	
-	# Fallback to remote_addrs if api_ip is empty. We pick the first IPv4 and IPv6
-	# separately to avoid merging both addresses into a single string.
-	local remote_ipv4="" remote_ipv6="" remote_line=""
+	# Fallback to remote_addrs if api_ip is empty. Parse only the list contents so
+	# the key name itself is never mistaken for a value.
+	local remote_candidates=() remote_line="" remote_payload=""
 	if [ -z "$api_ip" ]
 	then
 		remote_line=$(awk '/^\[node\]/{flag=1;next} /^\[/{flag=0} flag && /remote_addrs[[:space:]]*=/{print; exit}' "${CONFIG_FILE}")
 		if [ -n "$remote_line" ]; then
-			# Extract all candidate addresses (IPv4 or IPv6) from the line, even if they were concatenated
-			mapfile -t remote_candidates < <(echo "$remote_line" | grep -Eo '([0-9]{1,3}(\.[0-9]{1,3}){3}|[0-9a-fA-F:]{2,})')
-			for addr in "${remote_candidates[@]}"; do
-				if [[ "$addr" == *:* ]]; then
-					[ -z "$remote_ipv6" ] && remote_ipv6="$addr"
-				else
-					[ -z "$remote_ipv4" ] && remote_ipv4="$addr"
-				fi
+			remote_payload=$(echo "$remote_line" | sed -E 's/^[^=]*=[[:space:]]*\[(.*)\][[:space:]]*$/\1/')
+			IFS=',' read -r -a remote_raw_candidates <<< "$remote_payload"
+			for candidate in "${remote_raw_candidates[@]}"; do
+				candidate=$(echo "$candidate" | tr -d '"' | xargs)
+				[ -n "$candidate" ] && remote_candidates+=("$candidate")
 			done
 		fi
 	fi
@@ -141,14 +138,14 @@ function load_config_files()
 	[ -n "$api_port" ] && NODE_PORT="$api_port"
 	if [ -n "$api_ip" ]; then
 		NODE_IP="$api_ip"
-	elif [ -n "$remote_ipv4" ]; then
-		NODE_IP="$remote_ipv4"
+	elif [ ${#remote_candidates[@]} -gt 0 ]; then
+		NODE_IP="${remote_candidates[0]}"
 	elif [ -z "$NODE_IP" ]; then
 		NODE_IP="0.0.0.0"
 	fi
 	# Preserve IPv6 if available
-	if [ -z "$NODE_IPV6" ] && [ -n "$remote_ipv6" ]; then
-		NODE_IPV6="$remote_ipv6"
+	if [ -z "$NODE_IPV6" ] && [ ${#remote_candidates[@]} -gt 1 ]; then
+		NODE_IPV6="${remote_candidates[1]}"
 	fi
 	
 	# Load chain_id from rpc section
@@ -1980,8 +1977,8 @@ function ask_remote_ip()
 	fi
 	
 	# Ask for remote IP
-	VALUE=$(whiptail --inputbox "Please enter your node's public IP address:" 8 78 "$NODE_IP" \
-		--title "Node IP" 3>&1 1>&2 2>&3) || return 1;
+	VALUE=$(whiptail --inputbox "Please enter your node's public address:" 8 78 "$NODE_IP" \
+		--title "Node Address" 3>&1 1>&2 2>&3) || return 1;
 	
 	# Check if the user pressed Cancel
 	if [ $? -ne 0 ]
@@ -2001,7 +1998,7 @@ function ask_remote_ip()
 	# Reject obviously invalid values
 	if [ "$VALUE" = "0.0.0.0" ] || [ "$VALUE" = "::1" ]
 	then
-		output_error "Please enter a publicly routable IP address."
+		output_error "Please enter a publicly routable address."
 		return 2
 	fi
 
