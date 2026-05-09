@@ -63,6 +63,15 @@ CERTIFICATE_DATE_CREATION=""
 CERTIFICATE_DATE_EXPIRATION=""
 CERTIFICATE_ISSUER=""
 CERTIFICATE_SUBJECT=""
+NODE_STATUS_AVAILABLE=false
+NODE_STATUS_MONIKER=""
+NODE_STATUS_ADDRESS=""
+NODE_STATUS_SERVICE_TYPE=""
+NODE_STATUS_LOCATION=""
+NODE_STATUS_PEERS=""
+NODE_STATUS_UPLINK=""
+NODE_STATUS_DOWNLINK=""
+NODE_STATUS_VERSION=""
 FIREWALL_PREVIOUS_NODE_PORT=0
 FIREWALL_PREVIOUS_WIREGUARD_PORT=0
 FIREWALL_PREVIOUS_V2RAY_PORT=0
@@ -967,6 +976,65 @@ function network_remote_addr()
 	return 0;
 }
 
+# Function to get local node status details exposed by the node API
+function network_local_node_status()
+{
+	NODE_STATUS_AVAILABLE=false
+	NODE_STATUS_MONIKER=""
+	NODE_STATUS_ADDRESS=""
+	NODE_STATUS_SERVICE_TYPE=""
+	NODE_STATUS_LOCATION=""
+	NODE_STATUS_PEERS=""
+	NODE_STATUS_UPLINK=""
+	NODE_STATUS_DOWNLINK=""
+	NODE_STATUS_VERSION=""
+
+	if [ -z "$NODE_PORT" ] || ! command -v curl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1
+	then
+		return 1
+	fi
+
+	local response=""
+	local endpoint=""
+	for endpoint in "http://127.0.0.1:${NODE_PORT}" "http://127.0.0.1:${NODE_PORT}/status"
+	do
+		response=$(curl -fsS --max-time 2 "$endpoint" 2>/dev/null || true)
+		if [ -n "$response" ] && echo "$response" | jq -e '.success == true and (.result | type == "object")' >/dev/null 2>&1
+		then
+			break
+		fi
+		response=""
+	done
+
+	if [ -z "$response" ]
+	then
+		return 1
+	fi
+
+	NODE_STATUS_ADDRESS=$(echo "$response" | jq -r '.result.addr // empty')
+	NODE_STATUS_MONIKER=$(echo "$response" | jq -r '.result.moniker // empty')
+	NODE_STATUS_SERVICE_TYPE=$(echo "$response" | jq -r '.result.service_type // empty')
+	NODE_STATUS_PEERS=$(echo "$response" | jq -r '.result.peers // empty')
+	NODE_STATUS_UPLINK=$(echo "$response" | jq -r '.result.uplink // empty')
+	NODE_STATUS_DOWNLINK=$(echo "$response" | jq -r '.result.downlink // empty')
+	NODE_STATUS_VERSION=$(echo "$response" | jq -r '.result.version.tag // empty')
+
+	local city country country_code
+	city=$(echo "$response" | jq -r '.result.location.city // empty')
+	country=$(echo "$response" | jq -r '.result.location.country // empty')
+	country_code=$(echo "$response" | jq -r '.result.location.country_code // empty')
+	if [ -n "$city" ] && [ -n "$country" ]; then
+		NODE_STATUS_LOCATION="${city}, ${country}"
+	elif [ -n "$country" ]; then
+		NODE_STATUS_LOCATION="$country"
+	elif [ -n "$country_code" ]; then
+		NODE_STATUS_LOCATION="$country_code"
+	fi
+
+	NODE_STATUS_AVAILABLE=true
+	return 0
+}
+
 # Function to prompt for a new node IP and reapply the configuration after invalid IP is detected
 function handle_invalid_node_ip_for_port_check()
 {
@@ -979,7 +1047,7 @@ function handle_invalid_node_ip_for_port_check()
 			break
 		elif [ $prompt_result -eq 2 ]
 		then
-			output_error "A valid public IP address is required."
+			output_error "A valid public address is required."
 			continue
 		else
 			return 1
@@ -2611,7 +2679,7 @@ function menu_installation()
 		generate_vpn_config || { output_error "Failed to generate vpn configuration."; return 1; }
 	fi
 	
-	# If Remote IP is empty, ask for Remote IP
+	# If remote address is empty, ask for remote address
 	if [ -z "$NODE_IP" ] || [ $config_created = true ]
 	then
 		# Load VPN configuration into variables
@@ -2750,9 +2818,10 @@ function menu_configuration()
 
 	local CHOICE=""
 	
-	CHOICE=$(whiptail --title "dVPN Node Manager" --menu "Welcome to the dVPN node configuration process.\n\nPlease select an option:" 16 78 6 \
+	CHOICE=$(whiptail --title "dVPN Node Manager" --menu "Welcome to the dVPN node configuration process.\n\nPlease select an option:" 17 78 7 \
 		"Settings" "Modify node settings" \
 		"Wallet" "Access wallet details" \
+		"Status" "View local node status" \
 		"Certificate" "Access certificate details" \
 		"Actions" "Manage node operations" \
 		"Update" "Apply node updates" \
@@ -2766,6 +2835,9 @@ function menu_configuration()
 			;;
 		"Wallet")
 			menu_wallet
+			;;
+		"Status")
+			menu_status
 			;;
 		"Certificate")
 			menu_certificate
@@ -2789,7 +2861,7 @@ function menu_settings()
 		local MESSAGE="Node Configuration:\n"
 		MESSAGE+="  - Moniker: ${NODE_MONIKER}\n"
 		MESSAGE+="  - Node Location: ${NODE_LOCATION}\n"
-		MESSAGE+="  - Remote IP: ${NODE_IP}\n"
+		MESSAGE+="  - Remote Address: ${NODE_IP}\n"
 		MESSAGE+="  - Node Port: ${NODE_PORT}/tcp\n"
 		if [ "$NODE_TYPE" = "wireguard" ]
 		then
@@ -2872,25 +2944,57 @@ function menu_wallet()
 	wallet_addresses || { output_error "Failed to get public address, please check your wallet configuration."; return 1; }
 	# Get wallet balance
 	wallet_balance || { output_error "Failed to retrieve wallet balance, API may be down."; return 1; }
+	network_local_node_status || true
 	
 	# Set the width of the dialog box
 	local WIDTH=78
-	local LABEL_PUBLIC_ADDRESS="Public Address:"
-	local LABEL_NODE_ADDRESS="Node Address:"
-	local LABEL_BALANCE="${WALLET_BALANCE_DENOM} Balance:"
-	
-	# Calculate space needed to right-align the addresses and balance
-	local PAD_PUBLIC=$(printf '%*s' $((WIDTH - ${#PUBLIC_ADDRESS} - ${#LABEL_PUBLIC_ADDRESS} - 5)) "")
-	local PAD_NODE=$(printf '%*s' $((WIDTH - ${#NODE_ADDRESS} - ${#LABEL_NODE_ADDRESS} - 5)) "")
-	local PAD_BALANCE=$(printf '%*s' $((WIDTH - ${#WALLET_BALANCE} - ${#LABEL_BALANCE} - 5)) "")
+	local NODE_ADDRESS_DISPLAY="Unavailable"
+	if [ -n "$NODE_STATUS_ADDRESS" ]; then
+		NODE_ADDRESS="$NODE_STATUS_ADDRESS"
+		NODE_ADDRESS_DISPLAY="$NODE_STATUS_ADDRESS"
+	fi
 	
 	# Construct the display message
-	local MESSAGE="${LABEL_PUBLIC_ADDRESS}${PAD_PUBLIC}${PUBLIC_ADDRESS}\n"
-	MESSAGE+="${LABEL_NODE_ADDRESS}${PAD_NODE}${NODE_ADDRESS}\n"
-	MESSAGE+="${LABEL_BALANCE}${PAD_BALANCE}${WALLET_BALANCE}"
+	local MESSAGE="Wallet:\n"
+	MESSAGE+="  - Public Address: ${PUBLIC_ADDRESS}\n"
+	MESSAGE+="  - Node Address: ${NODE_ADDRESS_DISPLAY}\n"
+	MESSAGE+="  - ${WALLET_BALANCE_DENOM} Balance: ${WALLET_BALANCE}\n"
 	
 	# Display wallet information and prompt for next action
-	whiptail --title "Wallet Information" --msgbox "$MESSAGE" 12 $WIDTH --ok-button "Back"
+	whiptail --title "Wallet Information" --msgbox "$MESSAGE" 10 $WIDTH --ok-button "Back"
+}
+
+# Function to display local node status information
+function menu_status()
+{
+	local WIDTH=78
+	local MESSAGE=""
+	local STATUS_ENDPOINT_DISPLAY="127.0.0.1:${NODE_PORT:-unknown}"
+
+	network_local_node_status || true
+
+	if container_running
+	then
+		MESSAGE="dVPN node container: Running\n"
+	else
+		MESSAGE="dVPN node container: Stopped\n"
+	fi
+
+	if [ "$NODE_STATUS_AVAILABLE" = true ]; then
+		MESSAGE+="\nLocal Node Status:\n"
+		[ -n "$NODE_STATUS_ADDRESS" ] && MESSAGE+="  - Node Address: ${NODE_STATUS_ADDRESS}\n"
+		[ -n "$NODE_STATUS_MONIKER" ] && MESSAGE+="  - Moniker: ${NODE_STATUS_MONIKER}\n"
+		[ -n "$NODE_STATUS_SERVICE_TYPE" ] && MESSAGE+="  - Service Type: ${NODE_STATUS_SERVICE_TYPE}\n"
+		[ -n "$NODE_STATUS_LOCATION" ] && MESSAGE+="  - Location: ${NODE_STATUS_LOCATION}\n"
+		[ -n "$NODE_STATUS_PEERS" ] && MESSAGE+="  - Peers: ${NODE_STATUS_PEERS}\n"
+		[ -n "$NODE_STATUS_VERSION" ] && MESSAGE+="  - Version: ${NODE_STATUS_VERSION}\n"
+		[ -n "$NODE_STATUS_UPLINK" ] && MESSAGE+="  - Uplink: ${NODE_STATUS_UPLINK} bytes\n"
+		[ -n "$NODE_STATUS_DOWNLINK" ] && MESSAGE+="  - Downlink: ${NODE_STATUS_DOWNLINK} bytes\n"
+	else
+		MESSAGE+="\nLocal Node Status: unavailable on ${STATUS_ENDPOINT_DISPLAY}\n"
+	fi
+
+	whiptail --title "Status" --msgbox "$MESSAGE" 16 $WIDTH --ok-button "Back"
 }
 
 # Function to display the certificate information
@@ -3052,11 +3156,37 @@ function menu_update()
 	return 0;
 }
 
+# Function to get a compact node software version for display
+function get_node_version()
+{
+	network_local_node_status || true
+	if [ -n "$NODE_STATUS_VERSION" ]; then
+		echo "$NODE_STATUS_VERSION"
+		return 0
+	fi
+
+	local version_output=""
+	local version_tag=""
+	local commit=""
+
+	version_output=$(docker run --rm "${CONTAINER_NAME}" version 2>&1 | tr -d '\r' | sed -E 's/\x1B\[[0-9;]*[[:alpha:]]//g')
+	version_tag=$(printf '%s\n' "$version_output" | awk -F': ' '/^(Tag|Version):/ {print $2; exit}' | xargs)
+	commit=$(printf '%s\n' "$version_output" | awk -F': ' '/^Commit:/ {print $2; exit}' | xargs)
+
+	if [ -n "$version_tag" ]; then
+		echo "$version_tag"
+	elif [ -n "$commit" ]; then
+		echo "Commit ${commit:0:12}"
+	else
+		echo "N/A"
+	fi
+}
+
 # Function to display the about menu
 function menu_about()
 {
 	# Get the current Node version
-	local NODE_VERSION=$(docker run --rm --tty ${CONTAINER_NAME} version | tr -d '\r')
+	local NODE_VERSION=$(get_node_version)
 
 	# Get the server model
 	local SERVER_MODEL="$(command -v dmidecode >/dev/null 2>&1 && dmidecode -s system-product-name || echo 'N/A')"
@@ -3219,14 +3349,30 @@ then
 	whiptail --title "Restart Complete" --msgbox "The dVPN node container has been successfully restarted." 8 78
 elif [ "$1" == "status" ]
 then
+	load_config_files || true
+	network_local_node_status || true
+	status_endpoint_display="127.0.0.1:${NODE_PORT:-unknown}"
+	local_status_message=""
 	if container_running
 	then
 		output_info "The dVPN node container is running."
-		whiptail --title "Status" --msgbox "The dVPN node container is running." 8 78
+		local_status_message="dVPN node container: Running\n"
 	else
 		output_info "The dVPN node container is stopped."
-		whiptail --title "Status" --msgbox "The dVPN node container is stopped." 8 78
+		local_status_message="dVPN node container: Stopped\n"
 	fi
+	if [ "$NODE_STATUS_AVAILABLE" = true ]; then
+		local_status_message+="\nLocal Node Status:\n"
+		[ -n "$NODE_STATUS_ADDRESS" ] && local_status_message+="  - Node Address: ${NODE_STATUS_ADDRESS}\n"
+		[ -n "$NODE_STATUS_MONIKER" ] && local_status_message+="  - Moniker: ${NODE_STATUS_MONIKER}\n"
+		[ -n "$NODE_STATUS_SERVICE_TYPE" ] && local_status_message+="  - Service Type: ${NODE_STATUS_SERVICE_TYPE}\n"
+		[ -n "$NODE_STATUS_LOCATION" ] && local_status_message+="  - Location: ${NODE_STATUS_LOCATION}\n"
+		[ -n "$NODE_STATUS_PEERS" ] && local_status_message+="  - Peers: ${NODE_STATUS_PEERS}\n"
+		[ -n "$NODE_STATUS_VERSION" ] && local_status_message+="  - Version: ${NODE_STATUS_VERSION}\n"
+	else
+		local_status_message+="\nLocal Node Status: unavailable on ${status_endpoint_display}\n"
+	fi
+	whiptail --title "Status" --msgbox "$local_status_message" 16 78
 elif [ "$1" == "balance" ]
 then
 	load_config_files || exit 1;
@@ -3240,6 +3386,7 @@ then
 	update_container || exit 1;
 elif [ "$1" == "about" ]
 then
+	load_config_files || true;
 	menu_about || exit 1;
 elif [ "$1" == "check-port" ]
 then
